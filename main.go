@@ -54,24 +54,13 @@ func GetVariableValue(data any, path string) (any, error) {
 		return os.Getenv(envVar), nil
 	}
 
-	// if parts[0] == "shell" {
-	// 	parts = parts[1:]
-	// 	shellCmd := strings.Join(parts, "")
+	return GetNodeFromPath(data, path)
+}
 
-	// 	cmd := exec.Command("bash", "-c", shellCmd)
-	// 	out, err := cmd.CombinedOutput()
+func GetNodeFromPath(root any, path string) (any, error) {
+	parts := strings.Split(path, ".")
 
-	// 	if err != nil {
-	// 		fmt.Println("Error:", err)
-
-	// 		os.Exit(1)
-	// 	}
-
-	// 	// NOTE: maybe remove just newlines
-	// 	return strings.TrimSpace(string(out)), nil
-	// }
-
-	current := data
+	current := root
 	for _, part := range parts {
 		m, ok := current.(map[string]any)
 		if !ok {
@@ -224,6 +213,8 @@ func printUsage() {
 }
 
 func main() {
+	var section string
+
 	outputMode := O_DotEnv // default mode
 	outputFile := os.Stdout
 
@@ -231,8 +222,7 @@ func main() {
 		printUsage()
 	}
 
-	path := os.Args[1]
-	var section string
+	configFilePath := os.Args[1]
 	if len(os.Args) >= 3 {
 		section = os.Args[2]
 	}
@@ -281,9 +271,9 @@ func main() {
 		}
 	}
 
-	raw, err := os.ReadFile(path)
+	raw, err := os.ReadFile(configFilePath)
 	if err != nil {
-		fmt.Printf("Error reading file %s: %v\n", path, err)
+		fmt.Printf("Error reading file %s: %v\n", configFilePath, err)
 		os.Exit(1)
 	}
 
@@ -322,66 +312,65 @@ func main() {
 
 	finalObj := make(map[string]any)
 
-	if section == "" {
-		toPrint = root
-		finalObj = root
-	} else {
-		parts := strings.Split(section, ".")
+	parts := strings.Split(section, ".")
 
-		current := any(root)
-		for _, part := range parts {
-			obj, ok := current.(map[string]any)
-			if !ok {
-				fmt.Printf("Error: section '%s' is not an object\n", section)
-				os.Exit(1)
-			}
-
-			next, exists := obj[part]
-			if !exists {
-				fmt.Printf("Error: section '%s' not found\n", section)
-				os.Exit(1)
-			}
-
-			// fmt.Println("HERE obj: ", part)
-
-			// for k, v := range next.(map[string]any) {
-			// 	fmt.Printf("key=%s type=%T\n", k, v)
-			// }
-
-			for k, v := range next.(map[string]any) {
-				switch v.(type) {
-				case map[string]any:
-					// fmt.Println("Skipping ", k, "from output")
-					// skip child sections
-					if includeChildSections {
-						// wildcard section, include child sections
-						finalObj[k] = v
-					} else {
-						continue
-					}
-					// finalObj[k] = v
-				// TODO: support direct variable resolution
-				// case string:
-				// 	value := pathToVarValue(root, v.(string))
-				// 	fmt.Println(value)
-
-				// 	return
-				case []any:
-					// fmt.Println("Array ", k)
-					finalObj[k] = v
-				default:
-					finalObj[k] = v
-					// fmt.Println("finalObj[", k, "] = ", v) // <- prints nothing
-				}
-			}
-
-			current = next
+	current := any(root)
+	for _, part := range parts {
+		obj, ok := current.(map[string]any)
+		if !ok {
+			fmt.Printf("Error: section '%s' is not an object\n", section)
+			os.Exit(1)
 		}
 
-		// toPrint = stripChildSections(toPrint)
+		next, exists := obj[part]
+		if !exists {
+			fmt.Printf("Error: section '%s' not found\n", section)
+			os.Exit(1)
+		}
+
+		// fmt.Println("HERE obj: ", part)
+
+		// for k, v := range next.(map[string]any) {
+		// 	fmt.Printf("key=%s type=%T\n", k, v)
+		// }
+
+		for k, v := range next.(map[string]any) {
+			switch v.(type) {
+			case map[string]any:
+				// fmt.Println("Skipping ", k, "from output")
+				// skip child sections
+				if includeChildSections {
+					// wildcard section, include child sections
+					finalObj[k] = v
+				} else {
+					continue
+				}
+				// finalObj[k] = v
+			// TODO: support direct variable resolution
+			// case string:
+			// 	value := pathToVarValue(root, v.(string))
+			// 	fmt.Println(value)
+
+			// 	return
+			case []any:
+				// fmt.Println("Array ", k)
+				finalObj[k] = v
+			default:
+				finalObj[k] = v
+				// fmt.Println("finalObj[", k, "] = ", v) // <- prints nothing
+			}
+		}
+
+		current = next
 	}
 
-	toPrint = parseVariables(root, finalObj)
+	// toPrint = stripChildSections(toPrint)
+
+	if includeChildSections {
+		toPrint = parseVariables(root, current)
+	} else {
+		toPrint = parseVariables(root, finalObj)
+	}
 
 	switch outputMode {
 	case O_JSON:

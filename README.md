@@ -47,11 +47,14 @@ It supports section selection, inheritance, and variable interpolation using the
 
 ## Installation
 
+Inside golang bin directory:
+
 ```bash
-go install ./...
+go build -o envsgen .
+go install ./
 ```
 
-Or build manually:
+Or custom directory:
 
 ```bash
 go build -o envsgen .

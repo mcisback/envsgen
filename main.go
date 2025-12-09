@@ -14,6 +14,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// TODO: add encryption like in here: https://dotenvx.com/docs/quickstart ?
+/*
+ * Basically with a strong password or public/private encryption it encrypts the dotenv
+ * In this case the TOML
+ * And the key is passed securely for example as a docker/os enviroment variable
+ * Or use dotenvx directly
+ */
+
 var allowShell bool = false
 var includeChildSections bool = false
 

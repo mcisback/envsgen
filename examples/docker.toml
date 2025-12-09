@@ -39,7 +39,7 @@ external = true
 
 # TODO: inheritance ?
 [docker.prod.services]
-#!extends docker.local.services
+#!extends docker.local.services #doesn't work yet
 
 [docker.prod.services.mysql.environment]
 MYSQL_ROOT_PASSWORD = "${shared.mysql.prod.MYSQL_ROOT_PASSWORD}"

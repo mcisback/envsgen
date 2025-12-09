@@ -1,0 +1,54 @@
+#!import shared
+
+[frontend]
+NEXTAUTH_SECRET= "${shared.JWT_SECRET}"
+GOOGLE_ID = "${shared.GOOGLE_ID}"
+GOOGLE_SECRET = "${shared.GOOGLE_SECRET}"
+RESEND_API_KEY = "${shared.RESEND_API_KEY}"
+
+[frontend.local]
+NEXTAUTH_URL = "http://localhost:3000"
+MONGODB_URI = "${shared.mongodb.local.MONGODB_URI}"
+STRIPE_PUBLIC_KEY = "${shared.stripe.test.STRIPE_PUBLIC_KEY}"
+STRIPE_SECRET_KEY = "${shared.stripe.test.STRIPE_SECRET_KEY}"
+STRIPE_WEBHOOK_SECRET = "${shared.stripe.test.STRIPE_WEBHOOK_SECRET}"
+MY_NUMBER = "${shared.TEST_VAR}"
+MY_FLOAT = "${shared.TEST_VAR_2}"
+MY_ENV_SECRET = "${envs.MY_ENV_SECRET}"
+MY_SHELL_VAR = "${`echo HELLO FROM SHELL`}"
+
+[frontend.production]
+NEXTAUTH_URL = "${shared.PROD_HOST}"
+API_URL= "${shared.PROD_HOST}/api"
+MONGODB_URI = "${shared.mongodb.production.MONGODB_URI}"
+
+[backend]
+JWT_SECRET = "${shared.JWT_SECRET}"
+GOOGLE_ID = "${shared.GOOGLE_ID}"
+GOOGLE_SECRET = "${shared.GOOGLE_SECRET}"
+
+[backend.local]
+# JWT_SECRET = "AMBARADILLA_LOCAL_JWT_SECRET"
+BASE_URL = "http://localhost:8000/api"
+FRONTEND_URL = "${frontend.local.NEXTAUTH_URL}"
+MONGODB_URI = "${shared.mongodb.local.MONGODB_URI}"
+PORTS = [
+    "${shared.PORT}", 
+    "4000"
+]
+MYSQL_ROOT_PASSWORD = "${shared.mysql.local.MYSQL_ROOT_PASSWORD}"
+MYSQL_USER = "${shared.mysql.local.MYSQL_USER}"
+MYSQL_DATABASE = "${shared.mysql.local.MYSQL_DATABASE}"
+MYSQL_PASSWORD = "${shared.mysql.local.MYSQL_PASSWORD}"
+
+[backend.production]
+BASE_URL = "${shared.PROD_HOST}/api"
+FRONTEND_URL = "${frontend.local.NEXTAUTH_URL}"
+MONGODB_URI = "${shared.mongodb.local.MONGODB_URI}"
+MYSQL_ROOT_PASSWORD = "${shared.mysql.prod.MYSQL_ROOT_PASSWORD}"
+MYSQL_USER = "${shared.mysql.prod.MYSQL_USER}"
+MYSQL_DATABASE = "${shared.mysql.prod.MYSQL_DATABASE}"
+MYSQL_PASSWORD = "${shared.mysql.prod.MYSQL_PASSWORD}"
+
+# TODO: imports ?
+#!import docker

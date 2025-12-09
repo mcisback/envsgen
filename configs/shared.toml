@@ -1,0 +1,37 @@
+[shared]
+JWT_SECRET = "demo_jwt_secret_change_me"
+PROD_HOST = "https://www.mysite.com"
+GOOGLE_ID = "google_oauth_client_id_example"
+GOOGLE_SECRET = "google_oauth_client_secret_example"
+RESEND_API_KEY = "resend_api_key_example"
+TEST_VAR = 12312322
+TEST_VAR_2 = 12.2012010
+PORT = 8000
+
+[shared.mysql.local]
+MYSQL_ROOT_PASSWORD = "rootpassword123"
+MYSQL_USER = "appuser"
+MYSQL_PASSWORD = "appuserpass"
+MYSQL_DATABASE = "appdb"
+
+[shared.mysql.prod]
+MYSQL_ROOT_PASSWORD = "prodpassword123"
+MYSQL_USER = "appuser"
+MYSQL_PASSWORD = "appuserprodpass"
+MYSQL_DATABASE = "appdb"
+
+[shared.mongodb.local]
+MONGODB_URI = "mongodb://USER:PASSWORD@localhost:27017/myAppDatabase?authSource=admin"
+
+[shared.mongodb.production]
+MONGODB_URI = "mongodb://USER:PASSWORD@localhost:27017/myAppDatabase?authSource=admin"
+
+[shared.stripe.test]
+STRIPE_PUBLIC_KEY = "stripe_test_public_key_example"
+STRIPE_SECRET_KEY = "stripe_test_secret_key_example"
+STRIPE_WEBHOOK_SECRET = "stripe_test_webhook_secret_example"
+
+[shared.stripe.live]
+STRIPE_PUBLIC_KEY = "stripe_live_public_key_example"
+STRIPE_SECRET_KEY = "stripe_live_secret_key_example"
+STRIPE_WEBHOOK_SECRET = "stripe_live_webhook_secret_example"

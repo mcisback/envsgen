@@ -277,7 +277,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	raw = []byte(preProcessTOML(string(raw)))
+	raw = []byte(preProcessTOML(configFilePath, string(raw)))
 
 	// fmt.Println(string(raw))
 
@@ -444,13 +444,38 @@ func printYAML(data any, outputFile io.Writer) {
 	}
 }
 
-func preProcessTOML(raw string) string {
-	re := regexp.MustCompile(`(#!import (.+))`)
+func preProcessTOML(configFilePath string, raw string) string {
+	re := regexp.MustCompile(`#!import\s+(.+)`)
 
-	matches := re.FindStringSubmatch(raw)
+	// Find all matches; each entry contains full match + captured group(s)
+	matches := re.FindAllStringSubmatch(raw, -1)
 
-	if len(matches) > 1 {
-		fileToImport := matches[2]
+	for _, m := range matches {
+		// m[0] is the entire "#!import file"
+		// m[1] is the extracted "file"
+		fileToImport := m[1]
+
+		if !strings.HasSuffix(fileToImport, ".toml") {
+			fileToImport = fileToImport + ".toml"
+		}
+
+		dirname := filepath.Dir(configFilePath)
+
+		// Not an absolute path
+		if !strings.HasPrefix(fileToImport, "/") {
+
+			if !strings.HasPrefix(dirname, "/") {
+				wd, _ := os.Getwd()
+
+				dirname = wd + "/" + dirname
+			}
+
+			fileToImport = filepath.Join(dirname, fileToImport)
+		}
+
+		// fmt.Println(fileToImport)
+
+		// os.Exit(1)
 
 		toml, err := os.ReadFile(fileToImport)
 		if err != nil {
@@ -458,11 +483,13 @@ func preProcessTOML(raw string) string {
 			os.Exit(1)
 		}
 
-		if re.MatchString(string(toml)) {
-			toml = []byte(preProcessTOML(string(toml)))
+		// Recurse if imports nest like curious little Matryoshkas
+		if re.Match(toml) {
+			toml = []byte(preProcessTOML(configFilePath, string(toml)))
 		}
 
-		raw = strings.ReplaceAll(raw, matches[0], string(toml)+"\n")
+		// Replace this specific import statement with file contents
+		raw = strings.ReplaceAll(raw, m[0], string(toml)+"\n")
 	}
 
 	return raw

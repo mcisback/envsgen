@@ -315,17 +315,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Validate [globals] exists in JSON
-	// globals, ok := root["globals"]
-	// if !ok {
-	// 	fmt.Println("Error: Missing [globals] section in the TOML/JSON.")
-	// 	os.Exit(1)
-	// }
-	// if _, ok := globals.(map[string]any); !ok {
-	// 	fmt.Println("Error: [globals] section must be an object.")
-	// 	os.Exit(1)
-	// }
-
 	// 4) If a section is provided, drill into it using JSON structure
 	var toPrint any = root
 

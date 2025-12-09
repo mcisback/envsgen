@@ -1,0 +1,49 @@
+# TODO: Would be nice to be handle also this so you can generate docker compose files with envsgen
+
+#!if envs.NODE_ENV == 'local'
+
+[docker.local.services.caddy]
+image = "caddy:latest"
+restart = "unless-stopped"
+cap_add = ["NET_ADMIN"]
+ports = ["80:80", "443:443", "443:443/udp"]
+volumes = [
+  "./conf:/etc/caddy",
+  # "$PWD/site:/srv",
+  "caddy_data:/data",
+  "caddy_config:/config"
+]
+networks = ["apps"]
+
+[docker.local.services.mysql]
+image = "mysql:8.0"
+container_name = "mysql_main"
+restart = "always"
+ports = ["3306:3306"]
+volumes = [ "mysql_data:/var/lib/mysql" ]
+networks = ["apps"]
+
+[docker.local.services.mysql.environment]
+MYSQL_ROOT_PASSWORD = "${shared.mysql.local.MYSQL_ROOT_PASSWORD}"
+MYSQL_USER = "${shared.mysql.local.MYSQL_USER}"
+MYSQL_DATABASE = "${shared.mysql.local.MYSQL_DATABASE}"
+MYSQL_PASSWORD = "${shared.mysql.local.MYSQL_PASSWORD}"
+
+[docker.local.volumes]
+caddy_data = ""
+caddy_config = ""
+
+[docker.local.networks.apps]
+external = true
+
+#!endif
+
+# TODO: inheritance ?
+[docker.prod.services]
+#!extends docker.local.services
+
+[docker.prod.services.mysql.environment]
+MYSQL_ROOT_PASSWORD = "${shared.mysql.prod.MYSQL_ROOT_PASSWORD}"
+MYSQL_USER = "${shared.mysql.prod.MYSQL_USER}"
+MYSQL_DATABASE = "${shared.mysql.prod.MYSQL_DATABASE}"
+MYSQL_PASSWORD = "${shared.mysql.prod.MYSQL_PASSWORD}"

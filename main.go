@@ -277,6 +277,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	raw = []byte(preProcessTOML(string(raw)))
+
+	// fmt.Println(string(raw))
+
+	// return
+
 	// 1) TOML -> Go structure
 	var tomlData map[string]any
 	if err := toml.Unmarshal(raw, &tomlData); err != nil {
@@ -436,4 +442,28 @@ func printYAML(data any, outputFile io.Writer) {
 		fmt.Printf("Error printing YAML: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+func preProcessTOML(raw string) string {
+	re := regexp.MustCompile(`(#!import (.+))`)
+
+	matches := re.FindStringSubmatch(raw)
+
+	if len(matches) > 1 {
+		fileToImport := matches[2]
+
+		toml, err := os.ReadFile(fileToImport)
+		if err != nil {
+			fmt.Printf("Error #!import file '%s': %v\n", fileToImport, err)
+			os.Exit(1)
+		}
+
+		if re.MatchString(string(toml)) {
+			toml = []byte(preProcessTOML(string(toml)))
+		}
+
+		raw = strings.ReplaceAll(raw, matches[0], string(toml)+"\n")
+	}
+
+	return raw
 }

@@ -276,7 +276,7 @@ envsgen config.toml backend.production -o .env.production
 
 - You can use envsgen to generate docker-compose files, and share data between docker and backend, so you don't have to copy paste it 1000times in different files:
 
-``toml
+```toml
 [shared]
 JWT_SECRET = "demo_jwt_secret_change_me"
 PROD_HOST = "https://www.mysite.com"

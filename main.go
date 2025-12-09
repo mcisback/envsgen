@@ -427,12 +427,17 @@ func printDotEnv(prefix string, data any, outputFile io.Writer) {
 
 	for k, v := range obj {
 		if includeChildSections {
+			pre := strings.ToUpper(k)
+
+			if prefix != "" {
+				pre = prefix + "__" + strings.ToUpper(k)
+			}
 			// skip child sections
 			switch v.(type) {
 			case map[string]any:
-				printDotEnv(strings.ToUpper(k+"__"), v, outputFile)
+				printDotEnv(pre, v, outputFile)
 			default:
-				fmt.Fprintf(outputFile, "%s=%v\n", prefix+k, v)
+				fmt.Fprintf(outputFile, "%s=%v\n", pre, v)
 			}
 
 			continue

@@ -458,7 +458,10 @@ func printBASH(prefix string, data any, outputFile io.Writer) {
 		os.Exit(1)
 	}
 
-	fmt.Fprintf(outputFile, "#!/bin/bash\n\n")
+	// First run
+	if prefix == "" {
+		fmt.Fprintf(outputFile, "#!/bin/bash\n\n")
+	}
 
 	for k, v := range obj {
 		if includeChildSections {

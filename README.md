@@ -221,7 +221,72 @@ envsgen config.toml backend.local
 
 Produces:
 ```dotenv
+BASE_URL   = "https://mysite.com/api"
+JWT_SECRET = "supersecret"
 MONGODB_URI=mongodb://root:pass@localhost/mydb
+```
+
+## Multiple values management
+
+You can have multiple values of the same variable to use for different dotenvs or configurations:
+
+```toml
+[globals]
+JWT_SECRET = "supersecret"
+PROD_HOST  = "https://mysite.com"
+
+[globals.mongodb.local]
+MONGODB_URI = "mongodb://root:pass@localhost/mydb"
+
+[globals.mongodb.prod]
+MONGODB_URI = "mongodb://root:pass@prod/mydb"
+
+[backend]
+JWT_SECRET = "${globals.JWT_SECRET}"
+
+[backend.local]
+BASE_URL   = "http://localhost:8000/api"
+MONGODB_URI = "${globals.mongodb.local}"
+
+[backend.prod]
+BASE_URL   = "${globals.PROD_HOST}/api"
+MONGODB_URI = "${globals.mongodb.prod}"
+
+[frontend.local]
+NEXTAUTH_URL = "http://localhost:3000"
+JWT_SECRET   = "${globals.JWT_SECRET}"
+```
+
+Running:
+```bash
+envsgen config.toml backend.local
+```
+
+Produces:
+```dotenv
+BASE_URL   = "http://localhost:8000/api"
+JWT_SECRET = "supersecret"
+MONGODB_URI=mongodb://root:pass@localhost/mydb
+```
+
+Running:
+```bash
+envsgen config.toml backend.prod
+```
+
+Produces:
+```dotenv
+BASE_URL   = "https://mysite.com/api"
+JWT_SECRET = "supersecret"
+MONGODB_URI=mongodb://root:pass@prod/mydb
+```
+
+So you can have all your configuration and dotenvs "logic" inside one config.toml file and generate dotenvs accordingly
+
+```bash
+envsgen config.toml backend.prod -o .env
+envsgen config.toml backend.local -o .env.local
+envsgen config.toml frontend.local -o ./my-next-js-frontend-app/.env.local
 ```
 
 ---

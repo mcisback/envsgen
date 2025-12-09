@@ -24,6 +24,7 @@ import (
 
 var allowShell bool = false
 var includeChildSections bool = false
+var beVerbose = false
 
 func GetVariableValue(data any, path string) (any, error) {
 	// Run when ${`shell command`} is used
@@ -34,7 +35,7 @@ func GetVariableValue(data any, path string) (any, error) {
 
 		shellCmd := strings.Join(parts, "")
 
-		if !allowShell {
+		if !allowShell && beVerbose {
 			fmt.Fprint(os.Stderr, "For command: ", shellCmd, "\nShell Command execution not allowed\nUse --allow-shell to enable it.\n\n")
 
 			return "", nil
@@ -218,6 +219,7 @@ func printUsage() {
 	fmt.Println("\t--envs, -ev, --bash				Output a BASH script that sets env variables")
 	fmt.Println("\t--allow-shell			Allow execution of shell commands")
 	fmt.Println("\t--output, -o filepath			Output to file instead of stdout")
+	fmt.Println("\t--verbose, -v			Be verbose")
 
 	os.Exit(0)
 }
@@ -240,6 +242,10 @@ func main() {
 	for i, arg := range os.Args {
 		if arg == "--help" || arg == "-h" {
 			printUsage()
+		}
+
+		if arg == "--verbose" || arg == "-v" {
+			beVerbose = true
 		}
 
 		if arg == "--json" || arg == "-j" {

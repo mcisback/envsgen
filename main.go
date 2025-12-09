@@ -273,7 +273,7 @@ func main() {
 			allowShell = true
 		}
 
-		if arg == "--include-child-sections" || arg == "-ics" {
+		if arg == "--expand" || arg == "-e" {
 			includeChildSections = true
 		}
 	}
@@ -434,9 +434,11 @@ func printDotEnv(prefix string, data any, outputFile io.Writer) {
 			default:
 				fmt.Fprintf(outputFile, "%s=%v\n", prefix+k, v)
 			}
-		} else {
-			fmt.Fprintf(outputFile, "%s=%v\n", prefix+k, v)
+
+			continue
 		}
+
+		fmt.Fprintf(outputFile, "%s=%v\n", prefix+k, v)
 	}
 }
 

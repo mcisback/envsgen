@@ -206,6 +206,7 @@ const (
 	O_DotEnv OutputMode = "dotenv"
 	O_JSON   OutputMode = "json"
 	O_YAML   OutputMode = "yaml"
+	O_BASH   OutputMode = "bash"
 )
 
 func printUsage() {
@@ -214,6 +215,7 @@ func printUsage() {
 	fmt.Println("\t--json, -j				Output in JSON format")
 	fmt.Println("\t--dotenv, -d				Output in dotenv format (default)")
 	fmt.Println("\t--yaml, -y				Output in YAML format")
+	fmt.Println("\t--envs, -ev, --bash				Output a BASH script that sets env variables")
 	fmt.Println("\t--allow-shell			Allow execution of shell commands")
 	fmt.Println("\t--output, -o filepath			Output to file instead of stdout")
 
@@ -252,6 +254,10 @@ func main() {
 			outputMode = O_YAML
 		}
 
+		if arg == "--envs" || arg == "-ev" || arg == "--bash" {
+			outputMode = O_BASH
+		}
+
 		if arg == "--output" || arg == "-o" {
 			if i+1 >= len(os.Args) {
 				fmt.Printf("Error: %s requires a file path\n", arg)
@@ -277,6 +283,7 @@ func main() {
 		if arg == "--expand" || arg == "-e" {
 			includeChildSections = true
 		}
+
 	}
 
 	raw, err := os.ReadFile(configFilePath)
@@ -396,6 +403,8 @@ func main() {
 	case O_YAML:
 		// print dotenv
 		printYAML(toPrint, outputFile)
+	case O_BASH:
+		printBASH("", toPrint, outputFile)
 	default:
 		fmt.Printf("Error: unknown output mode '%s'\n", outputMode)
 		os.Exit(1)
@@ -439,6 +448,37 @@ func printDotEnv(prefix string, data any, outputFile io.Writer) {
 		}
 
 		fmt.Fprintf(outputFile, "%s=%v\n", prefix+k, v)
+	}
+}
+
+func printBASH(prefix string, data any, outputFile io.Writer) {
+	obj, ok := data.(map[string]any)
+	if !ok {
+		fmt.Fprintln(outputFile, "Error in printDotEnv: data is not an object")
+		os.Exit(1)
+	}
+
+	fmt.Fprintf(outputFile, "#!/bin/bash\n\n")
+
+	for k, v := range obj {
+		if includeChildSections {
+			pre := strings.ToUpper(k)
+
+			if prefix != "" {
+				pre = prefix + "__" + strings.ToUpper(k)
+			}
+			// skip child sections
+			switch v.(type) {
+			case map[string]any:
+				printBASH(pre, v, outputFile)
+			default:
+				fmt.Fprintf(outputFile, "export %s=\"%v\"\n", pre, v)
+			}
+
+			continue
+		}
+
+		fmt.Fprintf(outputFile, "export %s=\"%v\"\n", prefix+k, v)
 	}
 }
 

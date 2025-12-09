@@ -1,5 +1,4 @@
-# TODO: Would be nice to be handle also this so you can generate docker compose files with envsgen
-
+# NOTE: ifs do not work, are just an idea
 #!if envs.NODE_ENV == 'local'
 
 [docker.local.services.caddy]

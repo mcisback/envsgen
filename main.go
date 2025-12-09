@@ -15,6 +15,7 @@ import (
 )
 
 var allowShell bool = false
+var includeChildSections bool = false
 
 func GetVariableValue(data any, path string) (any, error) {
 	// Run when ${`shell command`} is used
@@ -162,7 +163,13 @@ func parseVariables(root any, node any) any {
 		case map[string]any:
 			// fmt.Println("IS MAP ", k)
 			// skip child sections
-			continue
+			if includeChildSections {
+				obj := parseVariables(root, v.(map[string]any)).(map[string]any)
+				out[k] = obj
+			} else {
+				continue
+			}
+
 		case []any:
 			// fmt.Println("IS ARRAY ", k)
 			arr := v.([]any)
@@ -179,6 +186,9 @@ func parseVariables(root any, node any) any {
 			}
 
 			out[k] = newArr
+		case bool:
+			value := v.(bool)
+			out[k] = value
 		default:
 			value := v.(string)
 
@@ -261,6 +271,10 @@ func main() {
 
 		if arg == "--allow-shell" {
 			allowShell = true
+		}
+
+		if arg == "--include-child-sections" || arg == "-ics" {
+			includeChildSections = true
 		}
 	}
 
@@ -347,7 +361,13 @@ func main() {
 				case map[string]any:
 					// fmt.Println("Skipping ", k, "from output")
 					// skip child sections
-					continue
+					if includeChildSections {
+						// wildcard section, include child sections
+						finalObj[k] = v
+					} else {
+						continue
+					}
+					// finalObj[k] = v
 				// TODO: support direct variable resolution
 				// case string:
 				// 	value := pathToVarValue(root, v.(string))
@@ -377,7 +397,7 @@ func main() {
 		printJSON(toPrint, outputFile)
 	case O_DotEnv:
 		// print dotenv
-		printDotEnv(toPrint, outputFile)
+		printDotEnv("", toPrint, outputFile)
 	case O_YAML:
 		// print dotenv
 		printYAML(toPrint, outputFile)
@@ -398,7 +418,7 @@ func printJSON(data any, outputFile io.Writer) {
 	}
 }
 
-func printDotEnv(data any, outputFile io.Writer) {
+func printDotEnv(prefix string, data any, outputFile io.Writer) {
 	obj, ok := data.(map[string]any)
 	if !ok {
 		fmt.Fprintln(outputFile, "Error in printDotEnv: data is not an object")
@@ -406,7 +426,17 @@ func printDotEnv(data any, outputFile io.Writer) {
 	}
 
 	for k, v := range obj {
-		fmt.Fprintf(outputFile, "%s=%v\n", k, v)
+		if includeChildSections {
+			// skip child sections
+			switch v.(type) {
+			case map[string]any:
+				printDotEnv(strings.ToUpper(k+"__"), v, outputFile)
+			default:
+				fmt.Fprintf(outputFile, "%s=%v\n", prefix+k, v)
+			}
+		} else {
+			fmt.Fprintf(outputFile, "%s=%v\n", prefix+k, v)
+		}
 	}
 }
 

@@ -25,6 +25,7 @@ import (
 var allowShell bool = false
 var includeChildSections bool = false
 var beVerbose = false
+var ignoreMissingVars = false
 
 func GetVariableValue(data any, path string) (any, error) {
 	// Run when ${`shell command`} is used
@@ -108,6 +109,15 @@ func pathToVarValue(root any, path string) string {
 
 		varValue, err := GetVariableValue(root, varName)
 		if err != nil {
+			if ignoreMissingVars {
+
+				if beVerbose {
+					fmt.Fprintf(os.Stderr, "Error resolving variable '%s': %v\n", varName, err)
+				}
+
+				return matches[0]
+			}
+
 			fmt.Printf("Error resolving variable '%s': %v\n", varName, err)
 
 			os.Exit(1)
@@ -218,6 +228,7 @@ func printUsage() {
 	fmt.Println("\t--yaml, -y				Output in YAML format")
 	fmt.Println("\t--envs, -ev, --bash				Output a BASH script that sets env variables")
 	fmt.Println("\t--allow-shell			Allow execution of shell commands")
+	fmt.Println("\t--ignore-missing-vars, -iv			Ignore variables that do not resolve to anything")
 	fmt.Println("\t--output, -o filepath			Output to file instead of stdout")
 	fmt.Println("\t--verbose, -v			Be verbose")
 
@@ -284,6 +295,10 @@ func main() {
 
 		if arg == "--allow-shell" {
 			allowShell = true
+		}
+
+		if arg == "--ignore-missing-vars" || arg == "-iv" {
+			ignoreMissingVars = true
 		}
 
 		if arg == "--expand" || arg == "-e" {

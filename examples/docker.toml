@@ -27,10 +27,11 @@ MYSQL_ROOT_PASSWORD = "${shared.mysql.local.MYSQL_ROOT_PASSWORD}"
 MYSQL_USER = "${shared.mysql.local.MYSQL_USER}"
 MYSQL_DATABASE = "${shared.mysql.local.MYSQL_DATABASE}"
 MYSQL_PASSWORD = "${shared.mysql.local.MYSQL_PASSWORD}"
+CUSTOM_VAR = "https://${SUBDOMAIN}.${DOMAIN}"
 
 [docker.local.volumes]
-caddy_data = ""
-caddy_config = ""
+caddy_data = {}
+caddy_config = {}
 
 [docker.local.networks.apps]
 external = true

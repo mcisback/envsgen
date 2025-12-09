@@ -1,4 +1,4 @@
-module main
+module envsgen
 
 go 1.25.0
 

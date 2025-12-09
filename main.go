@@ -163,6 +163,22 @@ func parseVariables(root any, node any) any {
 			// fmt.Println("IS MAP ", k)
 			// skip child sections
 			continue
+		case []any:
+			// fmt.Println("IS ARRAY ", k)
+			arr := v.([]any)
+			newArr := make([]any, len(arr))
+
+			for i, item := range arr {
+				switch item.(type) {
+				case string:
+					value := pathToVarValue(root, item.(string))
+					newArr[i] = value
+				default:
+					newArr[i] = item
+				}
+			}
+
+			out[k] = newArr
 		default:
 			value := v.(string)
 
@@ -338,6 +354,9 @@ func main() {
 				// 	fmt.Println(value)
 
 				// 	return
+				case []any:
+					// fmt.Println("Array ", k)
+					finalObj[k] = v
 				default:
 					finalObj[k] = v
 					// fmt.Println("finalObj[", k, "] = ", v) // <- prints nothing

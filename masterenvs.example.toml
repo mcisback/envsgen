@@ -6,6 +6,19 @@ GOOGLE_SECRET = "google_oauth_client_secret_example"
 RESEND_API_KEY = "resend_api_key_example"
 TEST_VAR = 12312322
 TEST_VAR_2 = 12.2012010
+PORT = 8000
+
+[global.local]
+MYSQL_ROOT_PASSWORD = "rootpassword123"
+MYSQL_USER = "appuser"
+MYSQL_PASSWORD = "appuserpass"
+MYSQL_DATABASE = "appdb"
+
+[globals.prod]
+MYSQL_ROOT_PASSWORD = "prodpassword123"
+MYSQL_USER = "appuser"
+MYSQL_PASSWORD = "appuserprodpass"
+MYSQL_DATABASE = "appdb"
 
 [globals.mongodb.local]
 MONGODB_URI = "mongodb://USER:PASSWORD@localhost:27017/myAppDatabase?authSource=admin"
@@ -55,29 +68,60 @@ GOOGLE_SECRET = "${globals.GOOGLE_SECRET}"
 BASE_URL = "http://localhost:8000/api"
 FRONTEND_URL = "${frontend.local.NEXTAUTH_URL}"
 MONGODB_URI = "${globals.mongodb.local.MONGODB_URI}"
+PORTS = [
+    "${globals.PORT}", 
+    "4000"
+]
+MYSQL_ROOT_PASSWORD = "${globals.local.MYSQL_ROOT_PASSWORD}"
+MYSQL_USER = "${globals.local.MYSQL_USER}"
+MYSQL_DATABASE = "${globals.local.MYSQL_DATABASE}"
+MYSQL_PASSWORD = "${globals.local.MYSQL_PASSWORD}"
 
 [backend.production]
 BASE_URL = "${globals.PROD_HOST}/api"
 FRONTEND_URL = "${frontend.local.NEXTAUTH_URL}"
 MONGODB_URI = "${globals.mongodb.local.MONGODB_URI}"
+MYSQL_ROOT_PASSWORD = "${globals.prod.MYSQL_ROOT_PASSWORD}"
+MYSQL_USER = "${globals.prod.MYSQL_USER}"
+MYSQL_DATABASE = "${globals.prod.MYSQL_DATABASE}"
+MYSQL_PASSWORD = "${globals.prod.MYSQL_PASSWORD}"
 
 # TODO: Would be nice to be handle also this so you can generate docker compose files with envsgen
+
+#! if envs.NODE_ENV == 'local' # Not working just an idea
+
 [docker.services.caddy]
 image = "caddy:latest"
 restart = "unless-stopped"
 cap_add = ["NET_ADMIN"]
 ports = ["80:80", "443:443", "443:443/udp"]
 volumes = [
-  "$PWD/conf:/etc/caddy",
+  "./conf:/etc/caddy",
   # "$PWD/site:/srv",
   "caddy_data:/data",
   "caddy_config:/config"
 ]
 networks = ["apps"]
 
+[docker.services.mysql]
+image = "mysql:8.0"
+container_name = "mysql_main"
+restart = "always"
+ports = ["3306:3306"]
+volumes = [ "mysql_data:/var/lib/mysql" ]
+networks = ["apps"]
+
+[docker.services.mysql.environment]
+MYSQL_ROOT_PASSWORD = "${globals.MYSQL_ROOT_PASSWORD}"
+MYSQL_USER = "${globals.MYSQL_USER}"
+MYSQL_DATABASE = "${globals.MYSQL_DATABASE}"
+MYSQL_PASSWORD = "${globals.MYSQL_PASSWORD}"
+
 [docker.volumes]
 caddy_data = ""
 caddy_config = ""
 
-[docker.networks]
-apps = { external = true }
+[docker.networks.apps]
+external = true
+
+#! endif

@@ -189,6 +189,9 @@ func parseVariables(root any, node any) any {
 		case bool:
 			value := v.(bool)
 			out[k] = value
+		case float32, float64:
+			value := fmt.Sprintf("%f", v.(float64))
+			out[k] = ReplaceIfMatch(value, `\.0+`, "")
 		default:
 			value := v.(string)
 

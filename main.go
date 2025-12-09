@@ -183,13 +183,13 @@ const (
 )
 
 func printUsage() {
-	fmt.Printf("\tUsage:\n\t\t%s <path/to/config.toml> [section] [options]\n\n", filepath.Base(os.Args[0]))
-	fmt.Println("\tOptions:")
-	fmt.Println("\t\t--json, -j				Output in JSON format")
-	fmt.Println("\t\t--dotenv, -d				Output in dotenv format (default)")
-	fmt.Println("\t\t--yaml, -y				Output in YAML format")
-	fmt.Println("\t\t--allow-shell			Allow execution of shell commands")
-	fmt.Println("\t\t--output, -o filepath			Output to file instead of stdout")
+	fmt.Printf("Usage:\n\t%s <path/to/config.toml> [section] [options]\n\n", filepath.Base(os.Args[0]))
+	fmt.Println("Options:")
+	fmt.Println("\t--json, -j				Output in JSON format")
+	fmt.Println("\t--dotenv, -d				Output in dotenv format (default)")
+	fmt.Println("\t--yaml, -y				Output in YAML format")
+	fmt.Println("\t--allow-shell			Allow execution of shell commands")
+	fmt.Println("\t--output, -o filepath			Output to file instead of stdout")
 
 	os.Exit(0)
 }

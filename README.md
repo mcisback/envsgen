@@ -1,362 +1,329 @@
 # Envsgen
-Generate dotenv, JSON, or YAML from a single TOML configuration
 
-Envsgen is a small CLI that reads a TOML file, resolves variables like ${path.to.value}, and emits one section as a flat environment map (dotenv) or as JSON/YAML. It also supports importing other TOML files, environment-variable lookups, and optional shell-command expansion.
+**A powerful configuration management tool that transforms TOML into multiple output formats**
 
----
+Envsgen is a lightweight CLI utility that reads TOML configuration files, resolves variable interpolations, and generates environment configurations in various formats including dotenv, JSON, YAML, Docker Compose, Caddyfile, and Bash scripts.
 
-## Features
-
-- TOML → dotenv / JSON / YAML
-- Select a specific TOML section (table) to output
-- Variable interpolation inside strings with ${...}
-  - Reference other keys by path: ${shared.JWT_SECRET}
-  - Read environment variables: ${envs.MY_VAR}
-  - Run shell commands: ${`echo hello`} (requires --allow-shell)
-- Optional inclusion of child sections recursively (namespaced with double underscores) via --expand
-- Simple import system: inline other TOML files with #!import path/to/file.toml
-- Clean JSON (pretty-printed, no HTML escaping)
-- YAML output (indented, clean)
-
-Notes and caveats (by design, per current code):
-- The “section” argument must refer to a TOML table (not a single key). It is required.
-- In dotenv mode:
-  - Keys are printed as-is by default. When using --expand, nested keys are uppercased and joined with double underscores (PARENT__CHILD__KEY).
-  - Arrays print in Go’s default format (e.g., [a b c]); they are not comma-joined.
-- String interpolation resolves one variable expression per value (e.g., "X=${A}/suffix" works; multiple different ${...} in the same string are not fully supported).
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ---
 
-## Installation
+## 🌟 Key Features
 
-Prerequisites:
-- Go 1.18+ (1.20+ recommended)
+- **Multi-format output**: Generate dotenv, JSON, YAML, Docker Compose, Caddyfile, or Bash export scripts
+- **Smart variable interpolation**: Reference other TOML keys, environment variables, or shell commands
+- **Modular configuration**: Import other TOML files to keep configurations DRY
+- **Section-based generation**: Extract specific configuration sections for different environments
+- **Hierarchical support**: Optionally expand nested sections with namespaced keys
+- **Environment inheritance**: Child sections automatically inherit and override parent values
 
-Build locally:
-- Clone your repository (or place the code in a folder), then:
+---
 
+## 📋 Table of Contents
+
+- [Installation](#-installation)
+- [Quick Start](#-quick-start)
+- [Usage](#-usage)
+- [Configuration Structure](#-configuration-structure)
+- [Variable Interpolation](#-variable-interpolation)
+- [Output Formats](#-output-formats)
+- [Advanced Features](#-advanced-features)
+- [Real-World Examples](#-real-world-examples)
+- [Troubleshooting](#-troubleshooting)
+- [Roadmap](#-roadmap)
+
+---
+
+## 🚀 Installation
+
+### Prerequisites
+
+- Go 1.18 or higher (1.20+ recommended)
+
+### Using Make (Recommended)
+
+**Install to /usr/local/bin:**
 ```bash
+make install
+```
+
+**Install to custom directory:**
+```bash
+INSTALL_DIR=$HOME/.local/bin make install
+```
+
+**Build only:**
+```bash
+make build
+# Output: ./builds/envsgen
+```
+
+**Platform-specific builds:**
+```bash
+make linux      # Linux x86_64
+make windows    # Windows x86_64
+make darwin     # macOS x86_64
+make silicon    # macOS ARM64 (M-series)
+make release    # Build all platforms
+```
+
+### Using Go
+
+**Build manually:**
+```bash
+go mod tidy
 go build -o envsgen .
 ```
 
-Install to your PATH (two options):
-
-- Using go install (requires module path set in go.mod):
+**Install via go install:**
 ```bash
 go install ./
 ```
 
-- Or copy the built binary to a directory on your PATH:
+**Manual installation:**
 ```bash
 sudo cp envsgen /usr/local/bin
 ```
 
 ---
 
-## Usage
+## ⚡ Quick Start
+
+### 1. Create a configuration file
+
+**config.toml:**
+```toml
+[shared]
+JWT_SECRET = "supersecret"
+API_HOST = "https://api.example.com"
+
+[backend]
+BASE_URL = "${shared.API_HOST}/v1"
+JWT_SECRET = "${shared.JWT_SECRET}"
+PORT = 8000
+
+[backend.local]
+BASE_URL = "http://localhost:8000/v1"
+DEBUG = true
+```
+
+### 2. Generate environment files
+
+```bash
+# Production dotenv
+envsgen config.toml backend -o .env
+
+# Local development dotenv
+envsgen config.toml backend.local -o .env.local
+
+# JSON output
+envsgen config.toml backend --json -o config.json
+
+# YAML output
+envsgen config.toml backend --yaml -o config.yaml
+```
+
+---
+
+## 📖 Usage
+
+### Basic Syntax
 
 ```bash
 envsgen <path/to/config.toml> <section> [options]
 ```
 
-Options:
-- --dotenv, -de      Output dotenv (default)
-- --json, -j      Output JSON
-- --yaml, -y      Output YAML
-- --caddy, -cy				Output in CADDYFILE format (has some bugs but it works)
-- --docker, -d				Output in DOCKER COMPOSE format
-- --envs, -ev, --bash				Output a BASH script that sets env variables
-- --output, -o PATH     Write to file instead of stdout
-- --allow-shell     Allow execution of shell commands in ${`...`}
-- --ignore-missing-vars, -iv      Ignore variables that do not resolve to anything
-- --strict-vars-check, -sv			Stop if variables do not resolve to anything (default)
-- --expand, -e      Include child sections recursively (namespaced keys)
-- --verbose, -v			Be verbose
+### Command-Line Options
 
-Example:
-```bash
-envsgen config.toml backend.local
-envsgen config.toml backend --json
-envsgen config.toml backend --yaml -o backend.yaml
-envsgen config.toml backend --expand -o .env
-envsgen config.toml backend --allow-shell
-envsgen config.toml caddy.caddyfile --caddy
-```
+| Option | Alias | Description |
+|--------|-------|-------------|
+| `--dotenv` | `-de` | Output dotenv format (default) |
+| `--json` | `-j` | Output JSON format |
+| `--yaml` | `-y` | Output YAML format |
+| `--caddy` | `-cy` | Output Caddyfile format |
+| `--docker` | `-d` | Output Docker Compose YAML |
+| `--envs`, `--bash` | `-ev` | Output Bash export script |
+| `--output PATH` | `-o` | Write to file instead of stdout |
+| `--expand` | `-e` | Include nested sections recursively |
+| `--allow-shell` | | Enable shell command execution |
+| `--ignore-missing-vars` | `-iv` | Ignore unresolved variables |
+| `--strict-vars-check` | `-sv` | Fail on unresolved variables (default) |
+| `--verbose` | `-v` | Enable verbose output |
+| `--help` | `-h` | Show help message |
 
-Notes:
-- The section argument is required and must be a TOML table (e.g., backend, backend.local). A path that refers to a single primitive key (e.g., backend.local.BASE_URL) is not supported.
-- The program exits with an error if the section does not exist, or if a variable path cannot be resolved or resolves to a table.
+### Important Notes
+
+- The `<section>` argument is **required** and must refer to a TOML table (e.g., `backend`, `backend.local`)
+- Single keys (e.g., `backend.local.BASE_URL`) are not supported as sections
+- Child sections inherit parent values unless overridden
 
 ---
 
-## TOML imports
+## 🏗️ Configuration Structure
 
-You can inline other TOML files using a special directive:
+### Basic Structure
 
 ```toml
-#!import ./shared/shared
-#!import ./secrets.toml
-```
-
-Details:
-- The directive is: #!import <path>
-- The .toml extension is optional in the directive; it will be added if missing.
-- Relative paths are resolved relative to the main config file’s directory (or the current working directory if needed).
-- Imports are processed recursively.
-
----
-
-## Variable interpolation
-
-You can interpolate variables inside strings using ${...}. Resolution rules:
-
-- Reference other TOML keys by path (dot notation):
-  - Example: BASE_URL = "${shared.PROD_HOST}/api"
-- Read OS environment variables via the envs pseudo-root:
-  - Example: SECRET = "${envs.MY_SUPER_SECRET}"
-- Run shell commands (disabled by default; enable with --allow-shell):
-  - Example: GIT_SHA = "${`git rev-parse --short HEAD`}"
-
-Behavior:
-- If a referenced key does not exist, the program exits with an error.
-- If a reference resolves to an object (table), the program exits with an error. Only primitives are allowed.
-- If --allow-shell is not provided, ${`...`} is replaced with an empty string and a warning is printed to stderr.
-- Environment variables that are not set resolve to empty string.
-- Interpolation is resolved recursively if the resolved value itself contains another ${...}.
-- Each value supports one variable expression per string. Literal prefixes/suffixes work (e.g., "${A}/suffix"), but multiple different ${...} tokens in the same value are not fully supported.
-
----
-
-## Selecting sections
-
-The output is derived from exactly one selected section (a TOML table). Examples of valid sections:
-- backend
-- backend.local
-- frontend.production
-
-By default (without --expand), only the immediate keys inside that section are emitted (primitive values and arrays). Child tables are skipped.
-
-If you pass --expand (or -e), child tables are included recursively. In dotenv mode, nested keys are uppercased and namespaced by double underscores. For example:
-- Given a section backend that contains a child table local with key MONGODB_URI, the emitted key will be LOCAL__MONGODB_URI.
-- Immediate keys in the selected section are uppercased too, but are not prefixed by the section name.
-- Without expand if you print backend.local, backend.local will INHERIT parent backend section and overwrite parent section if same keys are present.
-
----
-
-## Output formats
-
-1) dotenv (default)
-- Prints KEY=value lines.
-- In default mode (no --expand), keys are printed as they appear in the TOML.
-- With --expand, keys are uppercased and nested tables become namespaced via double underscores.
-- Arrays print in Go’s default format (e.g., [a b c]).
-
-2) JSON
-- Pretty-printed with no HTML escaping.
-- Values reflect the resolved data after interpolation.
-
-3) YAML
-- Indented, clean YAML.
-- Values reflect the resolved data after interpolation.
-
----
-
-## Examples
-
-You can find more full example in the configs directory
-
-Example config:
-```toml
-# configs/shared.toml
 [shared]
-PROD_HOST  = "https://mysite.com"
-JWT_SECRET = "supersecret"
-```
-
-```toml
-# configs/config.toml
-#!import ./configs/shared
+# Shared variables accessible to all sections
+API_VERSION = "v1"
+DOMAIN = "example.com"
 
 [backend]
-BASE_URL   = "${shared.PROD_HOST}/api"
-JWT_SECRET = "${shared.JWT_SECRET}"
-FROM_ENV   = "${envs.MY_SUPER_SECRET}"
-GIT_SHA    = "${`echo abc123`}" # requires --allow-shell
+# Backend-specific configuration
+BASE_URL = "https://${shared.DOMAIN}/api/${shared.API_VERSION}"
+PORT = 8000
 
 [backend.local]
-MONGODB_URI = "mongodb://root:pass@localhost/mydb"
+# Local override (inherits from [backend])
+BASE_URL = "http://localhost:8000/api/${shared.API_VERSION}"
+DEBUG = true
 ```
 
-Set an env var:
-```bash
-export MY_SUPER_SECRET="aQCE3fJnIWajhIELeN5r2NGnWhZxhx"
-```
+### Section Inheritance
 
-- Dotenv for backend (immediate keys only):
-```bash
-envsgen config.toml backend
-```
-Produces:
-```
-BASE_URL=https://mysite.com/api
-JWT_SECRET=supersecret
-FROM_ENV=aQCE3fJnIWajhIELeN5r2NGnWhZxhx
-GIT_SHA=
-```
-Note: GIT_SHA is empty without --allow-shell.
+When selecting `backend.local` **without** `--expand`:
+- Inherits all keys from `[backend]`
+- Overrides inherited keys with its own values
+- Only immediate keys are output (no nested tables)
 
-- Dotenv with shell enabled:
-```bash
-envsgen config.toml backend --allow-shell
-```
-Produces:
-```
-BASE_URL=https://mysite.com/api
-JWT_SECRET=supersecret
-FROM_ENV=aQCE3fJnIWajhIELeN5r2NGnWhZxhx
-GIT_SHA=abc123
-```
+When selecting `backend` **with** `--expand`:
+- Includes all nested sections
+- Keys are namespaced: `LOCAL__DEBUG=true`
+- Creates hierarchical structure
 
-- Dotenv for backend with child sections included:
-```bash
-envsgen config.toml backend --expand
-```
-Produces:
-```
-BASE_URL=https://mysite.com/api
-JWT_SECRET=supersecret
-FROM_ENV=aQCE3fJnIWajhIELeN5r2NGnWhZxhx
-GIT_SHA=
-LOCAL__MONGODB_URI=mongodb://root:pass@localhost/mydb
-```
+---
 
-- Dotenv for backend.local without --expands INHERITS parent:
-backend.local vars WILL OVERWRITE backend VARS
-```bash
-envsgen config.toml backend.local
-```
-Produces:
-```
-## BACKEND
-BASE_URL=https://mysite.com/api
-JWT_SECRET=supersecret
-FROM_ENV=aQCE3fJnIWajhIELeN5r2NGnWhZxhx
-GIT_SHA=
-## backend.local
-MONGODB_URI=mongodb://root:pass@localhost/mydb
-```
+## 🔗 Variable Interpolation
 
-- JSON:
-```bash
-envsgen config.toml backend --json
-```
-Produces:
-```json
-{
-  "BASE_URL": "https://mysite.com/api",
-  "JWT_SECRET": "supersecret",
-  "FROM_ENV": "aQCE3fJnIWajhIELeN5r2NGnWhZxhx",
-  "GIT_SHA": ""
-}
-```
+### Syntax: `${path.to.value}`
 
-- YAML:
-```bash
-envsgen config.toml backend --yaml
-```
-Produces:
-```yaml
-BASE_URL: https://mysite.com/api
-JWT_SECRET: supersecret
-FROM_ENV: aQCE3fJnIWajhIELeN5r2NGnWhZxhx
-GIT_SHA: ""
-```
+Envsgen supports three types of variable interpolation:
 
-- Write to a file:
-```bash
-envsgen config.toml backend -o .env
-envsgen config.toml backend.local -o .env.local
-envsgen config.toml backend.production -o .env.production
-```
+### 1. TOML Key References
 
-## Docker Compose Generation
-
-- You can use envsgen to generate docker-compose files, and share data between docker and backend, so you don't have to copy paste it 1000times in different files:
+Reference other keys using dot notation:
 
 ```toml
 [shared]
-JWT_SECRET = "demo_jwt_secret_change_me"
-PROD_HOST = "https://www.mysite.com"
-GOOGLE_ID = "google_oauth_client_id_example"
-GOOGLE_SECRET = "google_oauth_client_secret_example"
-RESEND_API_KEY = "resend_api_key_example"
-TEST_VAR = 12312322
-TEST_VAR_2 = 12.2012010
-PORT = 8000
+HOST = "example.com"
+PORT = 443
 
-[shared.mysql.local]
-MYSQL_ROOT_PASSWORD = "rootpassword123"
-MYSQL_USER = "appuser"
-MYSQL_PASSWORD = "appuserpass"
-MYSQL_DATABASE = "appdb"
+[api]
+BASE_URL = "https://${shared.HOST}:${shared.PORT}"
+# Resolves to: https://example.com:443
+```
 
-[shared.mysql.prod]
-MYSQL_ROOT_PASSWORD = "prodpassword123"
-MYSQL_USER = "appuser"
-MYSQL_PASSWORD = "appuserprodpass"
-MYSQL_DATABASE = "appdb"
+### 2. Environment Variables
 
-[shared.mongodb.local]
-MONGODB_URI = "mongodb://USER:PASSWORD@localhost:27017/myAppDatabase?authSource=admin"
+Access OS environment variables using the `envs` prefix:
 
-[shared.mongodb.production]
-MONGODB_URI = "mongodb://USER:PASSWORD@localhost:27017/myAppDatabase?authSource=admin"
+```toml
+[secrets]
+API_KEY = "${envs.SECRET_API_KEY}"
+DATABASE_PASSWORD = "${envs.DB_PASSWORD}"
+```
 
-[shared.stripe.test]
-STRIPE_PUBLIC_KEY = "stripe_test_public_key_example"
-STRIPE_SECRET_KEY = "stripe_test_secret_key_example"
-STRIPE_WEBHOOK_SECRET = "stripe_test_webhook_secret_example"
+```bash
+export SECRET_API_KEY="abc123"
+export DB_PASSWORD="secure_pass"
+envsgen config.toml secrets
+```
 
-[shared.stripe.live]
-STRIPE_PUBLIC_KEY = "stripe_live_public_key_example"
-STRIPE_SECRET_KEY = "stripe_live_secret_key_example"
-STRIPE_WEBHOOK_SECRET = "stripe_live_webhook_secret_example"
+### 3. Shell Commands
 
-[docker.local.services.caddy]
-image = "caddy:latest"
-restart = "unless-stopped"
-cap_add = ["NET_ADMIN"]
-ports = ["80:80", "443:443", "443:443/udp"]
-volumes = [
-  "./conf:/etc/caddy",
-  # "$PWD/site:/srv",
-  "caddy_data:/data",
-  "caddy_config:/config"
+Execute shell commands (requires `--allow-shell` flag):
+
+```toml
+[build]
+GIT_COMMIT = "${`git rev-parse --short HEAD`}"
+BUILD_TIME = "${`date -u +%Y-%m-%dT%H:%M:%SZ`}"
+NODE_VERSION = "${`node --version`}"
+```
+
+```bash
+envsgen config.toml build --allow-shell
+```
+
+### Recursive Resolution
+
+Variables are resolved recursively:
+
+```toml
+[config]
+STAGE = "production"
+ENV_NAME = "${config.STAGE}"
+LOG_FILE = "/var/log/${config.ENV_NAME}.log"
+# Resolves to: /var/log/production.log
+```
+
+### Error Handling
+
+**By default (strict mode):**
+- Unresolved variables cause immediate exit with error
+- Missing TOML keys trigger errors
+- Variables resolving to objects (not primitives) trigger errors
+
+**With `--ignore-missing-vars`:**
+- Unresolved variables remain as `${...}` literals
+- Warnings printed to stderr (with `--verbose`)
+- Processing continues
+
+---
+
+## 📤 Output Formats
+
+### 1. Dotenv (Default)
+
+**Command:**
+**TOML Source:**
+
+```toml
+[frontend]
+NEXTAUTH_SECRET= "${shared.JWT_SECRET}"
+GOOGLE_ID = "${shared.GOOGLE_ID}"
+GOOGLE_SECRET = "${shared.GOOGLE_SECRET}"
+RESEND_API_KEY = "${shared.RESEND_API_KEY}"
+
+[frontend.local]
+NEXTAUTH_URL = "http://localhost:3000"
+MONGODB_URI = "${shared.mongodb.local.MONGODB_URI}"
+STRIPE_PUBLIC_KEY = "${shared.stripe.test.STRIPE_PUBLIC_KEY}"
+STRIPE_SECRET_KEY = "${shared.stripe.test.STRIPE_SECRET_KEY}"
+STRIPE_WEBHOOK_SECRET = "${shared.stripe.test.STRIPE_WEBHOOK_SECRET}"
+MY_NUMBER = "${shared.TEST_VAR}"
+MY_FLOAT = "${shared.TEST_VAR_2}"
+MY_ENV_SECRET = "${envs.MY_ENV_SECRET}"
+MY_SHELL_VAR = "${`echo HELLO FROM SHELL`}"
+
+[frontend.production]
+NEXTAUTH_URL = "${shared.PROD_HOST}"
+API_URL= "${shared.PROD_HOST}/api"
+MONGODB_URI = "${shared.mongodb.production.MONGODB_URI}"
+
+[backend]
+JWT_SECRET = "${shared.JWT_SECRET}"
+GOOGLE_ID = "${shared.GOOGLE_ID}"
+GOOGLE_SECRET = "${shared.GOOGLE_SECRET}"
+
+[backend.local]
+# JWT_SECRET = "AMBARADILLA_LOCAL_JWT_SECRET"
+BASE_URL = "http://localhost:8000/api"
+FRONTEND_URL = "${frontend.local.NEXTAUTH_URL}"
+MONGODB_URI = "${shared.mongodb.local.MONGODB_URI}"
+PORTS = [
+    "${shared.PORT}", 
+    "4000"
 ]
-networks = ["apps"]
-
-[docker.local.services.mysql]
-image = "mysql:8.0"
-container_name = "mysql_main"
-restart = "always"
-ports = ["3306:3306"]
-volumes = [ "mysql_data:/var/lib/mysql" ]
-networks = ["apps"]
-
-[docker.local.services.mysql.environment]
 MYSQL_ROOT_PASSWORD = "${shared.mysql.local.MYSQL_ROOT_PASSWORD}"
 MYSQL_USER = "${shared.mysql.local.MYSQL_USER}"
 MYSQL_DATABASE = "${shared.mysql.local.MYSQL_DATABASE}"
 MYSQL_PASSWORD = "${shared.mysql.local.MYSQL_PASSWORD}"
 
-[docker.local.volumes]
-caddy_data = ""
-caddy_config = ""
-
-[docker.local.networks.apps]
-external = true
-
-[docker.prod.services.mysql.environment]
+[backend.production]
+BASE_URL = "${shared.PROD_HOST}/api"
+FRONTEND_URL = "${frontend.local.NEXTAUTH_URL}"
+MONGODB_URI = "${shared.mongodb.local.MONGODB_URI}"
 MYSQL_ROOT_PASSWORD = "${shared.mysql.prod.MYSQL_ROOT_PASSWORD}"
 MYSQL_USER = "${shared.mysql.prod.MYSQL_USER}"
 MYSQL_DATABASE = "${shared.mysql.prod.MYSQL_DATABASE}"
@@ -364,101 +331,520 @@ MYSQL_PASSWORD = "${shared.mysql.prod.MYSQL_PASSWORD}"
 ```
 
 ```bash
-envsgen config.toml docker.local --expand --yaml -o docker-compose.local.yaml
+envsgen config.toml backend
 ```
-Produces a fully functional docker-compose file:
+
+**Output:**
+```dotenv
+GOOGLE_ID=google_oauth_client_id_example
+GOOGLE_SECRET=google_oauth_client_secret_example
+JWT_SECRET=demo_jwt_secret_change_me
+```
+
+**With `--expand`:**
+```dotenv
+GOOGLE_SECRET=google_oauth_client_secret_example
+JWT_SECRET=demo_jwt_secret_change_me
+LOCAL__MONGODB_URI=mongodb://USER:PASSWORD@localhost:27017/myAppDatabase?authSource=admin
+LOCAL__MYSQL_DATABASE=appdb
+LOCAL__MYSQL_PASSWORD=appuserpass
+LOCAL__MYSQL_ROOT_PASSWORD=rootpassword123
+LOCAL__MYSQL_USER=appuser
+LOCAL__PORTS=[8000 4000]
+LOCAL__BASE_URL=http://localhost:8000/api
+LOCAL__FRONTEND_URL=http://localhost:3000
+PRODUCTION__MYSQL_PASSWORD=appuserprodpass
+PRODUCTION__MYSQL_ROOT_PASSWORD=prodpassword123
+PRODUCTION__MYSQL_USER=appuser
+PRODUCTION__BASE_URL=https://www.mysite.com/api
+PRODUCTION__FRONTEND_URL=http://localhost:3000
+PRODUCTION__MONGODB_URI=mongodb://USER:PASSWORD@localhost:27017/myAppDatabase?authSource=admin
+PRODUCTION__MYSQL_DATABASE=appdb
+GOOGLE_ID=google_oauth_client_id_example
+```
+
+**Inheritance of parent + overwrite values:**
+```bash
+envsgen config.toml backend.local
+```
+
+**Output:**
+```dotenv
+PORTS=[8000 4000]
+FRONTEND_URL=http://localhost:3000
+MONGODB_URI=mongodb://USER:PASSWORD@localhost:27017/myAppDatabase?authSource=admin
+GOOGLE_ID=google_oauth_client_id_example
+MYSQL_USER=appuser
+MYSQL_DATABASE=appdb
+GOOGLE_SECRET=google_oauth_client_secret_example
+MYSQL_PASSWORD=appuserpass
+MYSQL_ROOT_PASSWORD=rootpassword123
+JWT_SECRET=demo_jwt_secret_change_me
+BASE_URL=http://localhost:8000/api
+```
+
+### 2. JSON
+
+**Command:**
+```bash
+envsgen config.toml backend --json
+```
+
+**Output:**
+```json
+{
+  "BASE_URL": "https://api.example.com/v1",
+  "JWT_SECRET": "supersecret",
+  "PORT": 8000
+}
+```
+
+### 3. YAML
+
+**Command:**
+```bash
+envsgen config.toml backend --yaml
+```
+
+**Output:**
+```yaml
+BASE_URL: https://api.example.com/v1
+JWT_SECRET: supersecret
+PORT: 8000
+```
+
+### 4. Bash Export Script
+
+**Command:**
+```bash
+envsgen config.toml backend --bash -o set-env.sh
+```
+
+**Output (set-env.sh):**
+```bash
+#!/bin/bash
+
+export BASE_URL="https://api.example.com/v1"
+export JWT_SECRET="supersecret"
+export PORT="8000"
+```
+
+**Usage:**
+```bash
+source set-env.sh
+```
+
+### 5. Docker Compose
+
+**Command:**
+```bash
+envsgen config.toml docker.local --docker -o docker-compose.yml
+```
+
+See [Docker Compose Example](#docker-compose-generation) below.
+
+### 6. Caddyfile
+
+**Command:**
+```bash
+envsgen config.toml caddy --caddy -o Caddyfile
+```
+
+**Input TOML:**
+```toml
+[caddy."example.com"]
+reverse_proxy = "localhost:8000"
+
+[caddy."example.com".tls]
+email = "admin@example.com"
+```
+
+**Output (Caddyfile):**
+```
+example.com {
+	reverse_proxy localhost:8000
+	tls {
+		email admin@example.com
+	}
+}
+```
+
+---
+
+## 🔧 Advanced Features
+
+### TOML Imports
+
+Keep configurations modular by importing other TOML files:
+
+**shared.toml:**
+```toml
+[shared]
+JWT_SECRET = "supersecret"
+PROD_HOST = "https://api.example.com"
+```
+
+**config.toml:**
+```toml
+#!import ./shared.toml
+# or
+#!import ./shared    # .toml extension auto-added
+
+[backend]
+BASE_URL = "${shared.PROD_HOST}/v1"
+JWT_SECRET = "${shared.JWT_SECRET}"
+```
+
+**Features:**
+- `.toml` extension is optional
+- Relative paths resolved from config file directory
+- Recursive imports supported (nested imports)
+- Absolute paths supported
+
+### Hierarchical Configuration
+
+**Example structure:**
+```toml
+[app]
+NAME = "MyApp"
+VERSION = "1.0.0"
+
+[app.database]
+HOST = "localhost"
+PORT = 5432
+
+[app.database.credentials]
+USER = "admin"
+PASSWORD = "secret"
+```
+
+**With `--expand`:**
+```bash
+envsgen config.toml app --expand
+```
+
+**Output (dotenv):**
+```dotenv
+NAME=MyApp
+VERSION=1.0.0
+DATABASE__HOST=localhost
+DATABASE__PORT=5432
+DATABASE__CREDENTIALS__USER=admin
+DATABASE__CREDENTIALS__PASSWORD=secret
+```
+
+---
+
+## 💼 Real-World Examples
+
+### Full-Stack Application Setup
+
+**master.toml:**
+```toml
+[shared]
+JWT_SECRET = "demo_jwt_secret_change_me"
+PROD_HOST = "https://www.mysite.com"
+GOOGLE_CLIENT_ID = "${envs.GOOGLE_OAUTH_ID}"
+GOOGLE_CLIENT_SECRET = "${envs.GOOGLE_OAUTH_SECRET}"
+
+[shared.database.local]
+POSTGRES_USER = "devuser"
+POSTGRES_PASSWORD = "devpass"
+POSTGRES_DB = "myapp_dev"
+DATABASE_URL = "postgresql://${shared.database.local.POSTGRES_USER}:${shared.database.local.POSTGRES_PASSWORD}@localhost:5432/${shared.database.local.POSTGRES_DB}"
+
+[shared.database.prod]
+POSTGRES_USER = "produser"
+POSTGRES_PASSWORD = "${envs.DB_PASSWORD}"
+POSTGRES_DB = "myapp_prod"
+DATABASE_URL = "postgresql://${shared.database.prod.POSTGRES_USER}:${shared.database.prod.POSTGRES_PASSWORD}@db:5432/${shared.database.prod.POSTGRES_DB}"
+
+[backend.local]
+NODE_ENV = "development"
+PORT = 8000
+BASE_URL = "http://localhost:${backend.local.PORT}"
+DATABASE_URL = "${shared.database.local.DATABASE_URL}"
+JWT_SECRET = "${shared.JWT_SECRET}"
+GOOGLE_CLIENT_ID = "${shared.GOOGLE_CLIENT_ID}"
+GOOGLE_CLIENT_SECRET = "${shared.GOOGLE_CLIENT_SECRET}"
+
+[backend.production]
+NODE_ENV = "production"
+PORT = 8000
+BASE_URL = "${shared.PROD_HOST}"
+DATABASE_URL = "${shared.database.prod.DATABASE_URL}"
+JWT_SECRET = "${envs.JWT_SECRET_PROD}"
+GOOGLE_CLIENT_ID = "${shared.GOOGLE_CLIENT_ID}"
+GOOGLE_CLIENT_SECRET = "${shared.GOOGLE_CLIENT_SECRET}"
+
+[frontend.local]
+NEXT_PUBLIC_API_URL = "http://localhost:8000/api"
+NEXT_PUBLIC_APP_URL = "http://localhost:3000"
+
+[frontend.production]
+NEXT_PUBLIC_API_URL = "${shared.PROD_HOST}/api"
+NEXT_PUBLIC_APP_URL = "${shared.PROD_HOST}"
+
+[docker.local.services.postgres]
+image = "postgres:15-alpine"
+container_name = "myapp_postgres"
+restart = "unless-stopped"
+ports = ["5432:5432"]
+volumes = ["postgres_data:/var/lib/postgresql/data"]
+networks = ["myapp"]
+
+[docker.local.services.postgres.environment]
+POSTGRES_USER = "${shared.database.local.POSTGRES_USER}"
+POSTGRES_PASSWORD = "${shared.database.local.POSTGRES_PASSWORD}"
+POSTGRES_DB = "${shared.database.local.POSTGRES_DB}"
+
+[docker.local.volumes]
+postgres_data = ""
+
+[docker.local.networks.myapp]
+driver = "bridge"
+```
+
+**Generate all configurations:**
+
+```bash
+# Set required environment variables
+export GOOGLE_OAUTH_ID="your_google_client_id"
+export GOOGLE_OAUTH_SECRET="your_google_client_secret"
+
+# Backend configurations
+envsgen master.toml backend.local -o backend/.env.local
+envsgen master.toml backend.production -o backend/.env.production
+
+# Frontend configurations
+envsgen master.toml frontend.local -o frontend/.env.local
+envsgen master.toml frontend.production -o frontend/.env.production
+
+# Docker Compose
+envsgen master.toml docker.local --docker -o docker-compose.local.yml
+
+# Bash script for CI/CD
+envsgen master.toml backend.production --bash -o scripts/set-prod-env.sh
+```
+
+### Docker Compose Generation
+
+**Input (config.toml):**
+```toml
+[docker.local.services.caddy]
+image = "caddy:latest"
+restart = "unless-stopped"
+cap_add = ["NET_ADMIN"]
+ports = ["80:80", "443:443"]
+volumes = ["./Caddyfile:/etc/caddy/Caddyfile", "caddy_data:/data"]
+networks = ["web"]
+
+[docker.local.services.app]
+build = "./app"
+depends_on = ["postgres"]
+environment = { NODE_ENV = "development" }
+ports = ["3000:3000"]
+networks = ["web"]
+
+[docker.local.services.postgres]
+image = "postgres:15"
+environment = { POSTGRES_PASSWORD = "devpass" }
+volumes = ["postgres_data:/var/lib/postgresql/data"]
+networks = ["web"]
+
+[docker.local.volumes]
+caddy_data = ""
+postgres_data = ""
+
+[docker.local.networks.web]
+driver = "bridge"
+```
+
+**Generate Docker Compose:**
+```bash
+envsgen config.toml docker.local --docker -o docker-compose.yml
+```
+
+**Output (docker-compose.yml):**
 ```yaml
 networks:
-  apps:
-    external: true
+  web:
+    driver: bridge
 services:
+  app:
+    build: ./app
+    depends_on:
+      - postgres
+    environment:
+      NODE_ENV: development
+    networks:
+      - web
+    ports:
+      - 3000:3000
   caddy:
     cap_add:
       - NET_ADMIN
     image: caddy:latest
     networks:
-      - apps
+      - web
     ports:
       - 80:80
       - 443:443
-      - 443:443/udp
     restart: unless-stopped
     volumes:
-      - ./conf:/etc/caddy
+      - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
-      - caddy_config:/config
-  mysql:
-    container_name: mysql_main
+  postgres:
     environment:
-      MYSQL_DATABASE: appdb
-      MYSQL_PASSWORD: appuserpass
-      MYSQL_ROOT_PASSWORD: rootpassword123
-      MYSQL_USER: appuser
-    image: mysql:8.0
+      POSTGRES_PASSWORD: devpass
+    image: postgres:15
     networks:
-      - apps
-    ports:
-      - 3306:3306
-    restart: always
+      - web
     volumes:
-      - mysql_data:/var/lib/mysql
+      - postgres_data:/var/lib/postgresql/data
 volumes:
-  caddy_config: ""
   caddy_data: ""
+  postgres_data: ""
 ```
 
-Now you can also create the dotenv for the backend:
+### Multi-Environment Strategy
+
+**Project structure:**
+```
+project/
+├── configs/
+│   ├── shared.toml
+│   ├── secrets.local.toml
+│   └── master.toml
+├── backend/
+│   ├── .env.local          # Generated
+│   └── .env.production     # Generated
+├── frontend/
+│   ├── .env.local          # Generated
+│   └── .env.production     # Generated
+└── docker-compose.yml      # Generated
+```
+
+**Generation script (generate-configs.sh):**
 ```bash
-envsgen config.toml backend.local
+#!/bin/bash
+
+set -e
+
+CONFIG="configs/master.toml"
+
+echo "🔧 Generating configurations..."
+
+# Backend
+envsgen "$CONFIG" backend.local -o backend/.env.local
+envsgen "$CONFIG" backend.staging -o backend/.env.staging
+envsgen "$CONFIG" backend.production -o backend/.env.production
+
+# Frontend
+envsgen "$CONFIG" frontend.local -o frontend/.env.local
+envsgen "$CONFIG" frontend.staging -o frontend/.env.staging
+envsgen "$CONFIG" frontend.production -o frontend/.env.production
+
+# Docker
+envsgen "$CONFIG" docker.local --docker -o docker-compose.local.yml
+envsgen "$CONFIG" docker.staging --docker -o docker-compose.staging.yml
+
+echo "✅ All configurations generated successfully!"
 ```
 
-Produces:
-```dotenv
-GOOGLE_SECRET=google_oauth_client_secret_example
-JWT_SECRET=demo_jwt_secret_change_me
-MYSQL_DATABASE=appdb
-BASE_URL=http://localhost:8000/api
-MYSQL_USER=appuser
-FRONTEND_URL=http://localhost:3000
-MYSQL_PASSWORD=appuserpass
-PORTS=[8000 4000]
-MONGODB_URI=mongodb://USER:PASSWORD@localhost:27017/myAppDatabase?authSource=admin
-MYSQL_ROOT_PASSWORD=rootpassword123
-GOOGLE_ID=google_oauth_client_id_example
+---
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**1. Variable not found**
+```
+Error resolving variable 'shared.MISSING_KEY': key 'MISSING_KEY' not found
+```
+**Solution:** Ensure the key exists in your TOML file or use `--ignore-missing-vars`
+
+**2. Section not found**
+```
+Error: section 'backend.typo' not found
+```
+**Solution:** Check section name spelling and TOML structure
+
+**3. Shell command returns empty**
+```
+GIT_SHA=
+```
+**Solution:** Add `--allow-shell` flag to enable command execution
+
+**4. Import file not found**
+```
+Error #!import file './missing.toml': no such file or directory
+```
+**Solution:** Check import path is correct relative to config file location
+
+**5. Variable resolves to object**
+```
+Error: variable 'shared.database' resolves to an object, expected a primitive value
+```
+**Solution:** Reference specific keys within the object: `${shared.database.HOST}`
+
+### Debug Tips
+
+**Enable verbose mode:**
+```bash
+envsgen config.toml backend --verbose
 ```
 
-**So from one file you generated both docker-compose and backend dotenv file**
+**Test variable resolution:**
+```bash
+# Output JSON to see resolved values
+envsgen config.toml backend --json | jq
+```
 
-Now from the same file you could generate production and staging configuration
-
-See the examples dir for more complete examples
-
----
-
-## Errors and exit behavior
-
-The program exits with a non-zero status on:
-- Invalid TOML
-- Missing section, or section path that does not refer to a table
-- Variable path not found
-- Variable resolves to a table (only primitives are allowed)
-- File write errors
-
-Warnings:
-- Using ${`...`} without --allow-shell prints a warning to stderr and resolves to an empty string.
+**Validate TOML syntax:**
+```bash
+# Use a TOML validator
+toml-cli check config.toml
+```
 
 ---
 
-## Roadmap
+## 🛣️ Roadmap
 
-- Improve array/object handling in dotenv output (e.g., CSV or configurable formatting)
-- Optional inclusion of the top-level section name in dotenv keys when expanding
-- Explicit inheritance
-- If/Else conditions ?
-- Loops ?
+### Features Ideas
+
+- [ ] **Enhanced array handling**: CSV formatting and custom delimiters in dotenv output
+- [ ] **Section name prefixes**: Optional inclusion of top-level section name in expanded keys
+- [ ] **Explicit inheritance syntax**: Clearer inheritance control between sections
+- [ ] **Conditional logic**: If/else expressions for environment-specific values
+- [ ] **Loops and iteration**: Generate repeated configuration blocks
+- [ ] **Template functions**: Built-in functions for common transformations (uppercase, lowercase, base64, etc.)
+- [ ] **Validation rules**: Schema validation for configuration values
+- [ ] **Encryption support**: Secure storage of sensitive values (similar to dotenvx)
+- [ ] **Configuration merging**: Combine multiple TOML files with override priority
+- [ ] **Watch mode**: Auto-regenerate outputs on configuration file changes
+
+### Contributions Welcome
+
+We welcome contributions! Areas where help is needed:
+- Additional output format support (Kubernetes ConfigMap, Terraform tfvars, etc.)
+- Improved documentation and examples
+- Bug reports and feature requests
+- Performance optimizations
 
 ---
 
-## License
+## 📄 License
 
-MIT
+MIT License - see [LICENSE](LICENSE) file for details
+
+---
+
+## 🤝 Support
+
+- **Issues**: [GitHub Issues](https://github.com/yourusername/envsgen/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/yourusername/envsgen/discussions)
+
+---
+
+**Made with ❤️ for developers who value DRY configuration management**

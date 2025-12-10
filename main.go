@@ -23,10 +23,11 @@ import (
  */
 
 var (
-	Version   = "dev"
-	Commit    = "none"
-	BuildDate = "unknown"
-	GoVersion = "unknown"
+	Version    = "dev"
+	Commit     = "none"
+	BuildDate  = "unknown"
+	GoVersion  = "unknown"
+	InstallDir = "/usr/local/bin"
 )
 
 var allowShell bool = false
@@ -39,6 +40,7 @@ func printUsageAndExit() {
 	fmt.Println("Commit: ", Commit)
 	fmt.Println("BuildDate: ", BuildDate)
 	fmt.Println("GoVersion: ", GoVersion)
+	fmt.Println("InstallDir: ", InstallDir)
 
 	fmt.Printf("\nUsage:\n\t%s <path/to/config.toml> [section] [options]\n\n", filepath.Base(os.Args[0]))
 	fmt.Println("Options:")

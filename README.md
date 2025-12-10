@@ -60,12 +60,15 @@ envsgen <path/to/config.toml> <section> [options]
 ```
 
 Options:
-- --dotenv, -d       Output dotenv (default)
-- --json, -j         Output JSON
-- --yaml, -y         Output YAML
-- --output, -o PATH  Write to file instead of stdout
-- --allow-shell      Allow execution of shell commands in ${`...`}
-- --expand, -e       Include child sections recursively (namespaced keys)
+- --dotenv, -d      Output dotenv (default)
+- --json, -j      Output JSON
+- --yaml, -y      Output YAML
+- --caddy, -cy				Output in CADDYFILE format (has some bugs but it works)
+- --output, -o PATH     Write to file instead of stdout
+- --allow-shell     Allow execution of shell commands in ${`...`}
+- --ignore-missing-vars, -iv      Ignore variables that do not resolve to anything
+- --expand, -e      Include child sections recursively (namespaced keys)
+- --verbose, -v			Be verbose
 
 Example:
 ```bash
@@ -74,6 +77,7 @@ envsgen config.toml backend --json
 envsgen config.toml backend --yaml -o backend.yaml
 envsgen config.toml backend --expand -o .env
 envsgen config.toml backend --allow-shell
+envsgen config.toml caddy.caddyfile --caddy
 ```
 
 Notes:

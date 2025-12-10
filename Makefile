@@ -1,5 +1,5 @@
 APP       := envsgen
-PKG       := envsgen
+PKG       := main
 BUILD_DIR := builds
 
 # Injected metadata

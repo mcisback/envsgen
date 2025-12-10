@@ -34,6 +34,29 @@ var includeChildSections bool = false
 var beVerbose = false
 var ignoreMissingVars = false
 
+func printUsageAndExit() {
+	fmt.Println("Version: ", Version)
+	fmt.Println("Commit: ", Commit)
+	fmt.Println("BuildDate: ", BuildDate)
+	fmt.Println("GoVersion: ", GoVersion)
+
+	fmt.Printf("\nUsage:\n\t%s <path/to/config.toml> [section] [options]\n\n", filepath.Base(os.Args[0]))
+	fmt.Println("Options:")
+	fmt.Println("\t--json, -j				Output in JSON format")
+	fmt.Println("\t--dotenv, -de				Output in DOTENV format (default)")
+	fmt.Println("\t--yaml, -y				Output in YAML format")
+	fmt.Println("\t--caddy, -cy				Output in CADDYFILE format (beta)")
+	fmt.Println("\t--docker, -d				Output in DOCKER COMPOSE format")
+	fmt.Println("\t--envs, -ev, --bash				Output a BASH script that sets env variables")
+	fmt.Println("\t--allow-shell			Allow execution of shell commands")
+	fmt.Println("\t--ignore-missing-vars, -iv			Ignore variables that do not resolve to anything")
+	fmt.Println("\t--strict-vars-check, -sv			Stop if variables do not resolve to anything (default)")
+	fmt.Println("\t--output, -o filepath			Output to file instead of stdout")
+	fmt.Println("\t--verbose, -v			Be verbose")
+
+	os.Exit(0)
+}
+
 func GetVariableValue(data any, path string) (any, error) {
 	// Run when ${`shell command`} is used
 
@@ -228,24 +251,6 @@ const (
 	O_CADDY  OutputMode = "caddy"
 	O_DOCKER OutputMode = "docker"
 )
-
-func printUsageAndExit() {
-	fmt.Printf("Usage:\n\t%s <path/to/config.toml> [section] [options]\n\n", filepath.Base(os.Args[0]))
-	fmt.Println("Options:")
-	fmt.Println("\t--json, -j				Output in JSON format")
-	fmt.Println("\t--dotenv, -de				Output in DOTENV format (default)")
-	fmt.Println("\t--yaml, -y				Output in YAML format")
-	fmt.Println("\t--caddy, -cy				Output in CADDYFILE format (beta)")
-	fmt.Println("\t--docker, -d				Output in DOCKER COMPOSE format")
-	fmt.Println("\t--envs, -ev, --bash				Output a BASH script that sets env variables")
-	fmt.Println("\t--allow-shell			Allow execution of shell commands")
-	fmt.Println("\t--ignore-missing-vars, -iv			Ignore variables that do not resolve to anything")
-	fmt.Println("\t--strict-vars-check, -sv			Stop if variables do not resolve to anything (default)")
-	fmt.Println("\t--output, -o filepath			Output to file instead of stdout")
-	fmt.Println("\t--verbose, -v			Be verbose")
-
-	os.Exit(0)
-}
 
 func main() {
 	var section string

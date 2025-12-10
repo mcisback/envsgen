@@ -1179,33 +1179,6 @@ Use `#!import` to split configs into multiple files:
 
 ---
 
-## 🔒 Security Best Practices
-
-1. **Never commit secrets**: Add `.env*` files to `.gitignore`
-2. **Use environment variables for production secrets**: Reference them with `${envs.SECRET_NAME}`
-3. **Separate local and production configs**: Keep production secrets in environment, not in TOML
-4. **Use encryption keys from environment**: `ENCRYPTION_KEY = "${envs.APP_ENCRYPTION_KEY}"`
-
-### Example `.gitignore`
-
-```gitignore
-# Generated environment files
-apps/**/.env*
-!apps/**/.env.example
-
-# Generated configs
-docker/docker-compose.*.yml
-caddy/Caddyfile.*
-scripts/set-env-*.sh
-debug/
-
-# Secrets
-*.pem
-*.key
-```
-
----
-
 ## 🎉 Quick Start Commands
 
 ```bash

@@ -10,7 +10,7 @@ Envsgen is a lightweight CLI utility that reads TOML configuration files, resolv
 
 ## Real World Example:
 
-- [Tutorial](./TUTORIAL.md) - Full documentation
+- [Tutorial](./TUTORIAL.md) - Real World Example
 
 ## 🌟 Key Features
 
@@ -937,7 +937,6 @@ toml-cli check config.toml
 - [ ] **Encryption support**: Secure storage of sensitive values (similar to dotenvx)
 - [ ] **Configuration merging**: Combine multiple TOML files with override priority
 - [ ] **Watch mode**: Auto-regenerate outputs on configuration file changes
--- You an already do it using a watch utility
 
 ### Contributions Welcome
 

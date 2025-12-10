@@ -221,18 +221,21 @@ const (
 	O_YAML   OutputMode = "yaml"
 	O_BASH   OutputMode = "bash"
 	O_CADDY  OutputMode = "caddy"
+	O_DOCKER OutputMode = "docker"
 )
 
 func printUsageAndExit() {
 	fmt.Printf("Usage:\n\t%s <path/to/config.toml> [section] [options]\n\n", filepath.Base(os.Args[0]))
 	fmt.Println("Options:")
 	fmt.Println("\t--json, -j				Output in JSON format")
-	fmt.Println("\t--dotenv, -d				Output in DOTENV format (default)")
+	fmt.Println("\t--dotenv, -de				Output in DOTENV format (default)")
 	fmt.Println("\t--yaml, -y				Output in YAML format")
 	fmt.Println("\t--caddy, -cy				Output in CADDYFILE format (beta)")
+	fmt.Println("\t--docker, -d				Output in DOCKER COMPOSE format")
 	fmt.Println("\t--envs, -ev, --bash				Output a BASH script that sets env variables")
 	fmt.Println("\t--allow-shell			Allow execution of shell commands")
 	fmt.Println("\t--ignore-missing-vars, -iv			Ignore variables that do not resolve to anything")
+	fmt.Println("\t--strict-vars-check, -sv			Stop if variables do not resolve to anything (default)")
 	fmt.Println("\t--output, -o filepath			Output to file instead of stdout")
 	fmt.Println("\t--verbose, -v			Be verbose")
 
@@ -258,7 +261,7 @@ func main() {
 		printUsageAndExit()
 	}
 
-	for i, arg := range os.Args {
+	for i, arg := range os.Args[3:] {
 		if arg == "--help" || arg == "-h" {
 			printUsageAndExit()
 		}
@@ -271,7 +274,7 @@ func main() {
 			outputMode = O_JSON
 		}
 
-		if arg == "--dotenv" || arg == "-d" {
+		if arg == "--dotenv" || arg == "-de" {
 			outputMode = O_DOTENV
 		}
 
@@ -282,6 +285,14 @@ func main() {
 		if arg == "--caddy" || arg == "-cy" {
 			outputMode = O_CADDY
 			includeChildSections = true
+		}
+
+		if arg == "--docker" || arg == "-d" {
+			outputMode = O_DOCKER
+			includeChildSections = true
+
+			// NOTE: make it default ?
+			ignoreMissingVars = true
 		}
 
 		if arg == "--envs" || arg == "-ev" || arg == "--bash" {
@@ -312,6 +323,10 @@ func main() {
 
 		if arg == "--ignore-missing-vars" || arg == "-iv" {
 			ignoreMissingVars = true
+		}
+
+		if arg == "--strict-vars-check" || arg == "-sv" {
+			ignoreMissingVars = false
 		}
 
 		if arg == "--expand" || arg == "-e" {
@@ -383,16 +398,9 @@ func main() {
 			os.Exit(1)
 		}
 
-		// fmt.Println("HERE obj: ", part)
-
-		// for k, v := range next.(map[string]any) {
-		// 	fmt.Printf("key=%s type=%T\n", k, v)
-		// }
-
 		for k, v := range next.(map[string]any) {
 			switch v.(type) {
 			case map[string]any:
-				// fmt.Println("Skipping ", k, "from output")
 				// skip child sections
 				if includeChildSections {
 					// wildcard section, include child sections
@@ -400,7 +408,6 @@ func main() {
 				} else {
 					continue
 				}
-				// finalObj[k] = v
 			// TODO: support direct variable resolution
 			// case string:
 			// 	value := pathToVarValue(root, v.(string))
@@ -435,12 +442,13 @@ func main() {
 		// print dotenv
 		printDotEnv("", toPrint, outputFile)
 	case O_YAML:
-		// print dotenv
 		printYAML(toPrint, outputFile)
 	case O_BASH:
 		printBASH("", toPrint, outputFile)
 	case O_CADDY:
 		printCADDY(toPrint, outputFile)
+	case O_DOCKER:
+		printYAML(toPrint, outputFile)
 	default:
 		fmt.Printf("Error: unknown output mode '%s'\n", outputMode)
 		os.Exit(1)
@@ -642,7 +650,7 @@ func preProcessTOML(configFilePath string, raw string) string {
 	for _, m := range matches {
 		// m[0] is the entire "#!import file"
 		// m[1] is the extracted "file"
-		fileToImport := m[1]
+		fileToImport := strings.TrimSpace(m[1])
 
 		if !strings.HasSuffix(fileToImport, ".toml") {
 			fileToImport = fileToImport + ".toml"

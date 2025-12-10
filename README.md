@@ -60,13 +60,16 @@ envsgen <path/to/config.toml> <section> [options]
 ```
 
 Options:
-- --dotenv, -d      Output dotenv (default)
+- --dotenv, -de      Output dotenv (default)
 - --json, -j      Output JSON
 - --yaml, -y      Output YAML
 - --caddy, -cy				Output in CADDYFILE format (has some bugs but it works)
+- --docker, -d				Output in DOCKER COMPOSE format
+- --envs, -ev, --bash				Output a BASH script that sets env variables
 - --output, -o PATH     Write to file instead of stdout
 - --allow-shell     Allow execution of shell commands in ${`...`}
 - --ignore-missing-vars, -iv      Ignore variables that do not resolve to anything
+- --strict-vars-check, -sv			Stop if variables do not resolve to anything (default)
 - --expand, -e      Include child sections recursively (namespaced keys)
 - --verbose, -v			Be verbose
 

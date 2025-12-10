@@ -36,8 +36,10 @@ func GetVariableValue(data any, path string) (any, error) {
 
 		shellCmd := strings.Join(parts, "")
 
-		if !allowShell && beVerbose {
-			fmt.Fprint(os.Stderr, "For command: ", shellCmd, "\nShell Command execution not allowed\nUse --allow-shell to enable it.\n\n")
+		if !allowShell {
+			if beVerbose {
+				fmt.Fprint(os.Stderr, "For command: ", shellCmd, "\nShell Command execution not allowed\nUse --allow-shell to enable it.\n\n")
+			}
 
 			return "", nil
 		}
@@ -221,7 +223,7 @@ const (
 	O_CADDY  OutputMode = "caddy"
 )
 
-func printUsage() {
+func printUsageAndExit() {
 	fmt.Printf("Usage:\n\t%s <path/to/config.toml> [section] [options]\n\n", filepath.Base(os.Args[0]))
 	fmt.Println("Options:")
 	fmt.Println("\t--json, -j				Output in JSON format")
@@ -244,7 +246,7 @@ func main() {
 	outputFile := os.Stdout
 
 	if len(os.Args) < 2 {
-		printUsage()
+		printUsageAndExit()
 	}
 
 	configFilePath := os.Args[1]
@@ -252,9 +254,13 @@ func main() {
 		section = os.Args[2]
 	}
 
+	if section == "" {
+		printUsageAndExit()
+	}
+
 	for i, arg := range os.Args {
 		if arg == "--help" || arg == "-h" {
-			printUsage()
+			printUsageAndExit()
 		}
 
 		if arg == "--verbose" || arg == "-v" {

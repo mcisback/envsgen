@@ -1,6 +1,8 @@
 APP       := envsgen
 PKG       := main
 BUILD_DIR := builds
+
+# FIX: $(PKG).InstallDir=$(INSTALL_DIR) is not working as expected
 INSTALL_DIR ?= /usr/local/bin
 
 # Injected metadata

@@ -22,6 +22,13 @@ import (
  * Or use dotenvx directly
  */
 
+var (
+	Version   = "dev"
+	Commit    = "none"
+	BuildDate = "unknown"
+	GoVersion = "unknown"
+)
+
 var allowShell bool = false
 var includeChildSections bool = false
 var beVerbose = false

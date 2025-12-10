@@ -35,3 +35,7 @@ STRIPE_WEBHOOK_SECRET = "stripe_test_webhook_secret_example"
 STRIPE_PUBLIC_KEY = "stripe_live_public_key_example"
 STRIPE_SECRET_KEY = "stripe_live_secret_key_example"
 STRIPE_WEBHOOK_SECRET = "stripe_live_webhook_secret_example"
+
+[shared.docker.prod.gateway]
+hostname = "host.docker.internal"
+ip = "172.17.0.1"

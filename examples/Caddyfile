@@ -1,0 +1,148 @@
+{
+    # Global options
+    admin off
+    debug
+    storage file_system {
+        root /var/lib/caddy/storage
+    }
+    email admin@example.com
+    order ratelimit before respond
+}
+
+# ============================================================
+# Primary site with reverse proxy, caching, rate limiting,
+# and custom error handling
+# ============================================================
+example.com {
+    encode gzip zstd
+
+    # Redirect HTTP to HTTPS handled automatically by Caddy
+
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Frame-Options "DENY"
+        X-Content-Type-Options "nosniff"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "no-referrer-when-downgrade"
+        cache-control "public, max-age=3600"
+    }
+
+    @static {
+        path *.css *.js *.png *.jpg *.svg *.webp *.ico
+    }
+
+    handle @static {
+        root * /var/www/static
+        file_server
+    }
+
+    # Rate limit dynamic requests
+    ratelimit {
+        zone dynamic {
+            key {remote_ip}
+            events 20
+            window 30s
+        }
+        allow zone dynamic
+    }
+
+    # Reverse proxy with retries, health checks, and load balancing
+    reverse_proxy /api/* {
+        lb_policy round_robin
+
+        to http://backend1:8080
+        to http://backend2:8080
+        to http://backend3:8080
+
+        health_uri /health
+        health_interval 15s
+
+        transport http {
+            read_timeout 30s
+            write_timeout 30s
+            dial_timeout 10s
+            tls_insecure_skip_verify
+        }
+    }
+
+    # Custom errors
+    handle_errors {
+        @notFound expression `{http.error.status_code} == 404`
+        rewrite @notFound /errors/404.html
+        file_server
+
+        @fiveHundreds expression `{http.error.status_code} >= 500`
+        rewrite @fiveHundreds /errors/500.html
+        file_server
+    }
+
+    log {
+        output file /var/log/caddy/example.log {
+            roll_size 10mb
+            roll_keep 10
+            roll_keep_for 720h
+        }
+        format json
+    }
+}
+
+# ============================================================
+# Subdomain hosting a static documentation site
+# ============================================================
+docs.example.com {
+    root * /srv/docs
+    encode gzip
+    file_server browse
+}
+
+# ============================================================
+# Internal dashboard protected with authentication
+# ============================================================
+admin.example.com {
+    encode zstd gzip
+
+    # Basic authentication
+    basicauth / {
+        admin JDJhJDEwJGE0a3d2V1l...hashedPasswordHere
+    }
+
+    reverse_proxy http://internal-dashboard:5000
+}
+
+# ============================================================
+# Wildcard site with templated responses
+# ============================================================
+*.demo.example.com {
+    templates
+    handle {
+        respond "Welcome to {{.Host}}. Your request arrived from {{.RemoteIP}} and the clock whispers {{.Now}}."
+    }
+}
+
+# ============================================================
+# Microservice using Unix sockets
+# ============================================================
+api.internal {
+    reverse_proxy unix//run/service.sock
+}
+
+# ============================================================
+# A separate site serving WebSockets with CORS
+# ============================================================
+ws.example.com {
+    @ws {
+        header Connection *Upgrade*
+        header Upgrade websocket
+    }
+
+    reverse_proxy @ws ws://realtime:9000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_ip}
+    }
+
+    header {
+        Access-Control-Allow-Origin *
+        Access-Control-Allow-Headers *
+    }
+}

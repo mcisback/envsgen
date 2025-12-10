@@ -214,18 +214,20 @@ func parseVariables(root any, node any) any {
 type OutputMode string
 
 const (
-	O_DotEnv OutputMode = "dotenv"
+	O_DOTENV OutputMode = "dotenv"
 	O_JSON   OutputMode = "json"
 	O_YAML   OutputMode = "yaml"
 	O_BASH   OutputMode = "bash"
+	O_CADDY  OutputMode = "caddy"
 )
 
 func printUsage() {
 	fmt.Printf("Usage:\n\t%s <path/to/config.toml> [section] [options]\n\n", filepath.Base(os.Args[0]))
 	fmt.Println("Options:")
 	fmt.Println("\t--json, -j				Output in JSON format")
-	fmt.Println("\t--dotenv, -d				Output in dotenv format (default)")
+	fmt.Println("\t--dotenv, -d				Output in DOTENV format (default)")
 	fmt.Println("\t--yaml, -y				Output in YAML format")
+	fmt.Println("\t--caddy, -cy				Output in CADDYFILE format (has some bugs but it works)")
 	fmt.Println("\t--envs, -ev, --bash				Output a BASH script that sets env variables")
 	fmt.Println("\t--allow-shell			Allow execution of shell commands")
 	fmt.Println("\t--ignore-missing-vars, -iv			Ignore variables that do not resolve to anything")
@@ -238,7 +240,7 @@ func printUsage() {
 func main() {
 	var section string
 
-	outputMode := O_DotEnv // default mode
+	outputMode := O_DOTENV // default mode
 	outputFile := os.Stdout
 
 	if len(os.Args) < 2 {
@@ -264,11 +266,16 @@ func main() {
 		}
 
 		if arg == "--dotenv" || arg == "-d" {
-			outputMode = O_DotEnv
+			outputMode = O_DOTENV
 		}
 
 		if arg == "--yaml" || arg == "-y" {
 			outputMode = O_YAML
+		}
+
+		if arg == "--caddy" || arg == "-cy" {
+			outputMode = O_CADDY
+			includeChildSections = true
 		}
 
 		if arg == "--envs" || arg == "-ev" || arg == "--bash" {
@@ -418,7 +425,7 @@ func main() {
 	case O_JSON:
 		// print JSON
 		printJSON(toPrint, outputFile)
-	case O_DotEnv:
+	case O_DOTENV:
 		// print dotenv
 		printDotEnv("", toPrint, outputFile)
 	case O_YAML:
@@ -426,6 +433,8 @@ func main() {
 		printYAML(toPrint, outputFile)
 	case O_BASH:
 		printBASH("", toPrint, outputFile)
+	case O_CADDY:
+		printCADDY(toPrint, outputFile)
 	default:
 		fmt.Printf("Error: unknown output mode '%s'\n", outputMode)
 		os.Exit(1)
@@ -472,10 +481,90 @@ func printDotEnv(prefix string, data any, outputFile io.Writer) {
 	}
 }
 
+func printCADDY(data any, outputFile io.Writer) {
+	obj, ok := data.(map[string]any)
+	if !ok {
+		fmt.Fprintln(outputFile, "Error in printCADDY: data is not an object")
+		os.Exit(1)
+	}
+
+	for domain, v := range obj {
+		switch v.(type) {
+		case map[string]any:
+
+			printCADDYSection(domain, v.(map[string]any), outputFile)
+
+		default:
+			fmt.Fprintf(os.Stderr, "%s %v is not an object\n", domain, v)
+
+			os.Exit(1)
+		}
+	}
+}
+
+//	domain {
+//		directives
+//	}
+func printCADDYSection(domain string, parent map[string]any, outputFile io.Writer) {
+	fmt.Fprintf(outputFile, "%s {\n", domain)
+
+	for sectionName, sectionContent := range parent {
+		switch sectionContent.(type) {
+		case map[string]any:
+
+			printCADDYBlock("\t", sectionName, sectionContent.(map[string]any), outputFile)
+
+		case []any:
+			printCADDYArray("\t", sectionName, sectionContent.([]any), outputFile)
+		default:
+			if sectionContent == "" {
+				fmt.Fprintf(outputFile, "\t%s\n", sectionName)
+
+				break
+			}
+			fmt.Fprintf(outputFile, "\t%s %v\n", sectionName, sectionContent)
+		}
+	}
+
+	fmt.Fprintf(outputFile, "\n}\n\n")
+}
+
+func printCADDYBlock(level string, blockName string, block map[string]any, outputFile io.Writer) {
+	fmt.Fprintf(outputFile, "%s%s {\n", level, blockName)
+
+	for directive, value := range block {
+		switch value.(type) {
+		case map[string]any:
+			printCADDYBlock(level+"\t", directive, value.(map[string]any), outputFile)
+		case []any:
+			printCADDYArray(level+"\t", directive, value.([]any), outputFile)
+		default:
+			if value == "" {
+				fmt.Fprintf(outputFile, "%s%s\n", level+"\t", directive)
+
+				break
+			}
+			fmt.Fprintf(outputFile, "%s%s %v\n", level+"\t", directive, value)
+		}
+	}
+
+	fmt.Fprintf(outputFile, "\n%s}\n", level)
+}
+
+func printCADDYArray(level string, directive string, array []any, outputFile io.Writer) {
+	fmt.Fprintf(outputFile, "%s%s", level, directive)
+
+	for _, v := range array {
+		fmt.Fprintf(outputFile, " %v", v)
+	}
+
+	fmt.Fprintln(outputFile)
+}
+
 func printBASH(prefix string, data any, outputFile io.Writer) {
 	obj, ok := data.(map[string]any)
 	if !ok {
-		fmt.Fprintln(outputFile, "Error in printDotEnv: data is not an object")
+		fmt.Fprintln(outputFile, "Error in printBASH: data is not an object")
 		os.Exit(1)
 	}
 

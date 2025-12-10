@@ -12,6 +12,10 @@ volumes = [
   "caddy_data:/data",
   "caddy_config:/config"
 ]
+# TODO: supports multiple var per line like:
+# extra_hosts = [
+#   "${shared.docker.prod.gateway.hostname}:${shared.docker.prod.gateway.ip}"
+# ]
 networks = ["apps"]
 
 [docker.local.services.mysql]

@@ -1135,31 +1135,6 @@ admin.myphpapp.com {
 
 ---
 
-## 📚 Key Concepts
-
-### The `_` (Underscore) Syntax for Caddyfiles
-
-Caddy configuration often requires multiple directives with the same name. Since TOML only allows unique keys within a section, envsgen uses a special `_` key with an array:
-
-```toml
-# In your TOML config:
-[caddy.prod."api.example.com"."reverse_proxy /api/*".to]
-_ = [
-    "http://backend1:8080",
-    "http://backend2:8080",
-    "http://backend3:8080",
-]
-```
-
-This generates:
-
-```caddyfile
-reverse_proxy /api/* {
-    to http://backend1:8080
-    to http://backend2:8080
-    to http://backend3:8080
-}
-```
 
 ### Variable Interpolation Types
 

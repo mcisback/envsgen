@@ -403,6 +403,37 @@ envsgen config.toml backend --json
 }
 ```
 
+**With `--expand`:**
+```json
+{
+  "GOOGLE_ID": "google_oauth_client_id_example",
+  "GOOGLE_SECRET": "google_oauth_client_secret_example",
+  "JWT_SECRET": "demo_jwt_secret_change_me",
+  "local": {
+    "BASE_URL": "http://localhost:8000/api",
+    "FRONTEND_URL": "http://localhost:3000",
+    "MONGODB_URI": "mongodb://USER:PASSWORD@localhost:27017/myAppDatabase?authSource=admin",
+    "MYSQL_DATABASE": "appdb",
+    "MYSQL_PASSWORD": "appuserpass",
+    "MYSQL_ROOT_PASSWORD": "rootpassword123",
+    "MYSQL_USER": "appuser",
+    "PORTS": [
+      "8000",
+      "4000"
+    ]
+  },
+  "production": {
+    "BASE_URL": "https://www.mysite.com/api",
+    "FRONTEND_URL": "http://localhost:3000",
+    "MONGODB_URI": "mongodb://USER:PASSWORD@localhost:27017/myAppDatabase?authSource=admin",
+    "MYSQL_DATABASE": "appdb",
+    "MYSQL_PASSWORD": "appuserprodpass",
+    "MYSQL_ROOT_PASSWORD": "prodpassword123",
+    "MYSQL_USER": "appuser"
+  }
+}
+```
+
 ### 3. YAML
 
 **Command:**
@@ -416,6 +447,33 @@ BASE_URL: https://api.example.com/v1
 JWT_SECRET: supersecret
 PORT: 8000
 ```
+
+**With `--expand`:**
+```toml
+GOOGLE_ID: google_oauth_client_id_example
+GOOGLE_SECRET: google_oauth_client_secret_example
+JWT_SECRET: demo_jwt_secret_change_me
+local:
+  BASE_URL: http://localhost:8000/api
+  FRONTEND_URL: http://localhost:3000
+  MONGODB_URI: mongodb://USER:PASSWORD@localhost:27017/myAppDatabase?authSource=admin
+  MYSQL_DATABASE: appdb
+  MYSQL_PASSWORD: appuserpass
+  MYSQL_ROOT_PASSWORD: rootpassword123
+  MYSQL_USER: appuser
+  PORTS:
+    - "8000"
+    - "4000"
+production:
+  BASE_URL: https://www.mysite.com/api
+  FRONTEND_URL: http://localhost:3000
+  MONGODB_URI: mongodb://USER:PASSWORD@localhost:27017/myAppDatabase?authSource=admin
+  MYSQL_DATABASE: appdb
+  MYSQL_PASSWORD: appuserprodpass
+  MYSQL_ROOT_PASSWORD: prodpassword123
+  MYSQL_USER: appuser
+```
+
 
 ### 4. Bash Export Script
 
@@ -431,6 +489,30 @@ envsgen config.toml backend --bash -o set-env.sh
 export BASE_URL="https://api.example.com/v1"
 export JWT_SECRET="supersecret"
 export PORT="8000"
+```
+
+**With `--expand`:**
+```bash
+#!/bin/bash
+
+export LOCAL__MONGODB_URI="mongodb://USER:PASSWORD@localhost:27017/myAppDatabase?authSource=admin"
+export LOCAL__MYSQL_DATABASE="appdb"
+export LOCAL__MYSQL_PASSWORD="appuserpass"
+export LOCAL__MYSQL_ROOT_PASSWORD="rootpassword123"
+export LOCAL__MYSQL_USER="appuser"
+export LOCAL__PORTS="[8000 4000]"
+export LOCAL__BASE_URL="http://localhost:8000/api"
+export LOCAL__FRONTEND_URL="http://localhost:3000"
+export PRODUCTION__MYSQL_DATABASE="appdb"
+export PRODUCTION__MYSQL_PASSWORD="appuserprodpass"
+export PRODUCTION__MYSQL_ROOT_PASSWORD="prodpassword123"
+export PRODUCTION__MYSQL_USER="appuser"
+export PRODUCTION__BASE_URL="https://www.mysite.com/api"
+export PRODUCTION__FRONTEND_URL="http://localhost:3000"
+export PRODUCTION__MONGODB_URI="mongodb://USER:PASSWORD@localhost:27017/myAppDatabase?authSource=admin"
+export GOOGLE_ID="google_oauth_client_id_example"
+export GOOGLE_SECRET="google_oauth_client_secret_example"
+export JWT_SECRET="demo_jwt_secret_change_me"
 ```
 
 **Usage:**
@@ -470,6 +552,34 @@ example.com {
 	tls {
 		email admin@example.com
 	}
+}
+```
+
+#### Multiple Values For Same Key
+
+##### The `_` (Underscore) Syntax for Caddyfiles
+
+Caddy configuration often requires multiple directives with the same name. Since TOML only allows unique keys within a section, envsgen uses a special `_` key with an array:
+
+```toml
+# In your TOML config:
+[caddy.prod."api.example.com"."reverse_proxy /api/*".to]
+_ = [
+    "http://backend1:8080",
+    "http://backend2:8080",
+    "http://backend3:8080",
+]
+```
+
+This generates:
+
+```caddyfile
+api.example.com {
+  reverse_proxy /api/* {
+      to http://backend1:8080
+      to http://backend2:8080
+      to http://backend3:8080
+  }
 }
 ```
 
@@ -802,7 +912,7 @@ envsgen config.toml backend --verbose
 **Test variable resolution:**
 ```bash
 # Output JSON to see resolved values
-envsgen config.toml backend --json | jq
+envsgen config.toml backend --json --expand | jq
 ```
 
 **Validate TOML syntax:**
@@ -827,6 +937,7 @@ toml-cli check config.toml
 - [ ] **Encryption support**: Secure storage of sensitive values (similar to dotenvx)
 - [ ] **Configuration merging**: Combine multiple TOML files with override priority
 - [ ] **Watch mode**: Auto-regenerate outputs on configuration file changes
+-- You an already do it using a watch utility
 
 ### Contributions Welcome
 

@@ -227,7 +227,7 @@ func printUsage() {
 	fmt.Println("\t--json, -j				Output in JSON format")
 	fmt.Println("\t--dotenv, -d				Output in DOTENV format (default)")
 	fmt.Println("\t--yaml, -y				Output in YAML format")
-	fmt.Println("\t--caddy, -cy				Output in CADDYFILE format (has some bugs but it works)")
+	fmt.Println("\t--caddy, -cy				Output in CADDYFILE format (beta)")
 	fmt.Println("\t--envs, -ev, --bash				Output a BASH script that sets env variables")
 	fmt.Println("\t--allow-shell			Allow execution of shell commands")
 	fmt.Println("\t--ignore-missing-vars, -iv			Ignore variables that do not resolve to anything")

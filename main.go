@@ -526,10 +526,31 @@ func printCADDYSection(domain string, parent map[string]any, outputFile io.Write
 		}
 	}
 
-	fmt.Fprintf(outputFile, "\n}\n\n")
+	fmt.Fprintf(outputFile, "}\n\n")
 }
 
 func printCADDYBlock(level string, blockName string, block map[string]any, outputFile io.Writer) {
+
+	if raw, ok := block["_"]; ok {
+		// key exists
+		switch v := raw.(type) {
+		case []any:
+			fmt.Fprintln(outputFile)
+
+			// handle the special "_" array
+			for _, item := range v {
+				fmt.Fprintf(outputFile, "%s%s %v\n", level, blockName, item)
+			}
+
+			fmt.Fprintln(outputFile)
+		default:
+			// handle unexpected type
+			fmt.Fprintf(outputFile, "%s\t# unexpected '_' type: %T\n", level, raw)
+		}
+
+		return
+	}
+
 	fmt.Fprintf(outputFile, "%s%s {\n", level, blockName)
 
 	for directive, value := range block {
@@ -537,6 +558,7 @@ func printCADDYBlock(level string, blockName string, block map[string]any, outpu
 		case map[string]any:
 			printCADDYBlock(level+"\t", directive, value.(map[string]any), outputFile)
 		case []any:
+
 			printCADDYArray(level+"\t", directive, value.([]any), outputFile)
 		default:
 			if value == "" {
@@ -548,7 +570,7 @@ func printCADDYBlock(level string, blockName string, block map[string]any, outpu
 		}
 	}
 
-	fmt.Fprintf(outputFile, "\n%s}\n", level)
+	fmt.Fprintf(outputFile, "%s}\n", level)
 }
 
 func printCADDYArray(level string, directive string, array []any, outputFile io.Writer) {

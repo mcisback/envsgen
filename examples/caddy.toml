@@ -27,12 +27,21 @@ file_server = ""
 
 lb_policy = "round_robin"
 
-to = "http://backend1:8080"
-# to = "http://backend2:8080"
-# to = "http://backend3:8080"
+
 
 health_uri = "\"/health\""
 health_interval = "15s"
+
+# NOTE: This will print this, so you can have same keys multiple values for caddyfiles
+# to http://backend1:8080
+# to http://backend2:8081
+# to http://backend2:8082
+[caddy.caddyfile."www.myapp.com"."reverse_proxy /api/*".to]
+_ = [
+    "http://backend1:8080",
+    "http://backend2:8081",
+    "http://backend3:8082",
+]
 
 [caddy.caddyfile."www.myapp.com"."reverse_proxy /api/*"."transport http"]
 read_timeout = "30s"

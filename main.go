@@ -261,51 +261,51 @@ func main() {
 		printUsageAndExit()
 	}
 
-	for i, arg := range os.Args[3:] {
-		if arg == "--help" || arg == "-h" {
+	args := os.Args[3:]
+
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+
+		switch arg {
+		case "--help", "-h":
 			printUsageAndExit()
-		}
 
-		if arg == "--verbose" || arg == "-v" {
+		case "--verbose", "-v":
 			beVerbose = true
-		}
 
-		if arg == "--json" || arg == "-j" {
+		case "--json", "-j":
 			outputMode = O_JSON
-		}
 
-		if arg == "--dotenv" || arg == "-de" {
+		case "--dotenv", "-de":
 			outputMode = O_DOTENV
-		}
 
-		if arg == "--yaml" || arg == "-y" {
+		case "--yaml", "-y":
 			outputMode = O_YAML
-		}
 
-		if arg == "--caddy" || arg == "-cy" {
+		case "--caddy", "-cy":
 			outputMode = O_CADDY
 			includeChildSections = true
-		}
 
-		if arg == "--docker" || arg == "-d" {
+		case "--docker", "-d":
 			outputMode = O_DOCKER
 			includeChildSections = true
+			ignoreMissingVars = true // your note
 
-			// NOTE: make it default ?
-			ignoreMissingVars = true
-		}
-
-		if arg == "--envs" || arg == "-ev" || arg == "--bash" {
+		case "--envs", "-ev", "--bash":
 			outputMode = O_BASH
-		}
 
-		if arg == "--output" || arg == "-o" {
-			if i+1 >= len(os.Args) {
+		case "--output", "-o":
+			if i+1 >= len(args) {
 				fmt.Printf("Error: %s requires a file path\n", arg)
 				os.Exit(1)
 			}
 
-			outPath := os.Args[i+1]
+			outPath := args[i+1]
+
+			if strings.HasPrefix(outPath, "-") {
+				fmt.Printf("Error: %s requires a file path, but got flag '%s'\n", arg, outPath)
+				os.Exit(1)
+			}
 
 			file, err := os.Create(outPath)
 			if err != nil {
@@ -315,21 +315,20 @@ func main() {
 
 			defer file.Close()
 			outputFile = file
-		}
 
-		if arg == "--allow-shell" {
+			i++ // skip filename
+			continue
+
+		case "--allow-shell":
 			allowShell = true
-		}
 
-		if arg == "--ignore-missing-vars" || arg == "-iv" {
+		case "--ignore-missing-vars", "-iv":
 			ignoreMissingVars = true
-		}
 
-		if arg == "--strict-vars-check" || arg == "-sv" {
+		case "--strict-vars-check", "-sv":
 			ignoreMissingVars = false
-		}
 
-		if arg == "--expand" || arg == "-e" {
+		case "--expand", "-e":
 			includeChildSections = true
 		}
 
@@ -408,7 +407,7 @@ func main() {
 				} else {
 					continue
 				}
-			// TODO: support direct variable resolution
+			// TODO: support direct variable resolution ?
 			// case string:
 			// 	value := pathToVarValue(root, v.(string))
 			// 	fmt.Println(value)
@@ -650,7 +649,7 @@ func preProcessTOML(configFilePath string, raw string) string {
 	for _, m := range matches {
 		// m[0] is the entire "#!import file"
 		// m[1] is the extracted "file"
-		fileToImport := strings.TrimSpace(m[1])
+		fileToImport := strings.TrimSpace(m[1]) // avoid import file' ' <- sneaky space
 
 		if !strings.HasSuffix(fileToImport, ".toml") {
 			fileToImport = fileToImport + ".toml"

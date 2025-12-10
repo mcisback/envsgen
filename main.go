@@ -101,62 +101,126 @@ func ReplaceIfMatch(s, pattern, replaceWith string) string {
 	return out
 }
 
-func pathToVarValue(root any, path string) string {
+// func pathToVarValue(root any, path string) string {
+// 	re := regexp.MustCompile(`\$\{([^}]+)\}`)
+
+// 	path = re.ReplaceAllStringFunc(path, func(match string) string {
+
+// 		fmt.Println("MATCH_VAR: ", match)
+
+// 		matches := re.FindStringSubmatch(path)
+
+// 		if len(matches) > 1 {
+// 			varName := matches[1] // group 1 is the inside of ${...}
+
+// 			varValue, err := GetVariableValue(root, varName)
+// 			if err != nil {
+// 				if ignoreMissingVars {
+
+// 					if beVerbose {
+// 						fmt.Fprintf(os.Stderr, "Error resolving variable '%s': %v\n", varName, err)
+// 					}
+
+// 					return matches[0]
+// 				}
+
+// 				fmt.Printf("Error resolving variable '%s': %v\n", varName, err)
+
+// 				os.Exit(1)
+// 			}
+
+// 			switch varValue.(type) {
+// 			case map[string]any:
+// 				fmt.Printf("Error: variable '%s' resolves to an object, expected a primitive value\n", varName)
+// 				os.Exit(1)
+// 			case string:
+// 				varValue = varValue.(string)
+
+// 				// if the resolved string is again a variable, resolve it recursively
+// 				if re.MatchString(varValue.(string)) {
+// 					return pathToVarValue(root, varValue.(string))
+// 				}
+
+// 				return varValue.(string)
+// 			case int, int64, uint64, uint16, uint32:
+// 				return fmt.Sprintf("%d", varValue.(int))
+// 			case float64, float32:
+// 				varValue = fmt.Sprintf("%f", varValue.(float64))
+
+// 				return ReplaceIfMatch(varValue.(string), `\.0+`, "")
+// 			case bool:
+// 				return fmt.Sprintf("%t", varValue.(bool))
+// 				// allowed primitive types
+// 			default:
+// 				fmt.Printf("Error: variable '%s' is not supported\n", varName)
+// 				os.Exit(1)
+// 			}
+
+// 			// fmt.Println("FOUND: ", matches[0], " => ", varName, " = ", varValue) // prints: var.name
+
+// 			// value := strings.ReplaceAll(path, matches[0], fmt.Sprintf("%s", varValue))
+// 		}
+
+// 		return match
+// 	})
+
+// 	return path
+// }
+
+func pathToVarValue(root any, input string) string {
 	re := regexp.MustCompile(`\$\{([^}]+)\}`)
 
-	matches := re.FindStringSubmatch(path)
+	// Replace all occurrences like ${...} in the string
+	resolved := re.ReplaceAllStringFunc(input, func(match string) string {
+		sub := re.FindStringSubmatch(match)
+		if len(sub) < 2 {
+			return match
+		}
 
-	if len(matches) > 1 {
-		varName := matches[1] // group 1 is the inside of ${...}
+		varName := sub[1]
 
 		varValue, err := GetVariableValue(root, varName)
 		if err != nil {
 			if ignoreMissingVars {
-
 				if beVerbose {
 					fmt.Fprintf(os.Stderr, "Error resolving variable '%s': %v\n", varName, err)
 				}
-
-				return matches[0]
+				// keep the original ${...} literal
+				return match
 			}
 
 			fmt.Printf("Error resolving variable '%s': %v\n", varName, err)
-
 			os.Exit(1)
 		}
 
-		switch varValue.(type) {
+		switch v := varValue.(type) {
 		case map[string]any:
 			fmt.Printf("Error: variable '%s' resolves to an object, expected a primitive value\n", varName)
 			os.Exit(1)
-		case string:
-			varValue = varValue.(string)
 
-			// if the resolved string is again a variable, resolve it recursively
-			if re.MatchString(varValue.(string)) {
-				varValue = pathToVarValue(root, varValue.(string))
-			}
-		case int, int64, uint64, uint16, uint32:
-			varValue = fmt.Sprintf("%d", varValue.(int))
-		case float64, float32:
-			varValue = fmt.Sprintf("%f", varValue.(float64))
-			varValue = ReplaceIfMatch(varValue.(string), `\.0+`, "")
+		case string:
+			// recursively resolve nested variables inside the string
+			return pathToVarValue(root, v)
+
+		case int, int8, int16, int32, int64,
+			uint, uint8, uint16, uint32, uint64,
+			float32, float64:
+			s := fmt.Sprint(v)
+			// strip trailing ".0" / ".0000" etc
+			return ReplaceIfMatch(s, `\.0+`, "")
+
 		case bool:
-			varValue = fmt.Sprintf("%t", varValue.(bool))
-			// allowed primitive types
+			return fmt.Sprintf("%t", v)
+
 		default:
-			fmt.Printf("Error: variable '%s' is not supported\n", varName)
+			fmt.Printf("Error: variable '%s' is not supported (type %T)\n", varName, v)
 			os.Exit(1)
 		}
 
-		// fmt.Println("FOUND: ", matches[0], " => ", varName, " = ", varValue) // prints: var.name
+		return "" // unreachable, but satisfies the compiler
+	})
 
-		value := strings.ReplaceAll(path, matches[0], fmt.Sprintf("%s", varValue))
-
-		return value
-	}
-
-	return path
+	return resolved
 }
 
 func parseVariables(root any, node any) any {

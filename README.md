@@ -8,6 +8,10 @@ Envsgen is a lightweight CLI utility that reads TOML configuration files, resolv
 
 ---
 
+## Real World Example:
+
+- [Tutorial](./TUTORIAL.md) - Full documentation
+
 ## 🌟 Key Features
 
 - **Multi-format output**: Generate dotenv, JSON, YAML, Docker Compose, Caddyfile, or Bash export scripts

@@ -261,6 +261,12 @@ func main() {
 		printUsageAndExit()
 	}
 
+	if strings.HasPrefix(section, "-") {
+		fmt.Fprintf(os.Stderr, "section %s is probably a flag option and not a proper section, exiting...\n", section)
+
+		os.Exit(1)
+	}
+
 	args := os.Args[3:]
 
 	for i := 0; i < len(args); i++ {
